@@ -1,0 +1,6 @@
+anthropic==2.3.0
+pydantic>=2.7
+google-api-python-client>=2.140
+google-auth>=2.30
+google-auth-oauthlib>=1.2
+playwright>=1.49
