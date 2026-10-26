@@ -6,7 +6,9 @@ Facturas con CIF y domicilio fiscal españoles, IVA español, euros.
 
 import os
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 RAIZ = Path(__file__).resolve().parents[1]
 
@@ -50,6 +52,18 @@ def _obligatoria(nombre: str) -> str:
     return valor
 
 
+# El bot solo lee correos recibidos a partir de esta fecha (00:00 hora de España).
+FECHA_INICIO = "2026-10-15"
+
+
+def busqueda_gmail(desde: str) -> str:
+    """Búsqueda de Gmail con los correos con PDF aún no procesados desde `desde` (AAAA-MM-DD).
+    Se usa un instante exacto (segundos) porque "after:AAAA/MM/DD" de Gmail va en hora del Pacífico."""
+    inicio = datetime.fromisoformat(desde).replace(tzinfo=ZoneInfo("Europe/Madrid"))
+    return ("has:attachment filename:pdf -label:LegalSky/Procesado -label:LegalSky/Revisar "
+            f"after:{int(inicio.timestamp())}")
+
+
 def cargar() -> Config:
     cargar_env()
     return Config(
@@ -58,9 +72,7 @@ def cargar() -> Config:
         drive_carpeta_raiz_id=_obligatoria("DRIVE_CARPETA_RAIZ_ID"),
         hoja_control_id=_obligatoria("HOJA_CONTROL_ID"),
         google_token_json=_obligatoria("GOOGLE_TOKEN_JSON"),
-        gmail_busqueda=os.environ.get(
-            "GMAIL_BUSQUEDA", "has:attachment filename:pdf -label:LegalSky/Procesado -label:LegalSky/Revisar newer_than:180d"
-        ),
+        gmail_busqueda=os.environ.get("GMAIL_BUSQUEDA") or busqueda_gmail(os.environ.get("GMAIL_DESDE", FECHA_INICIO)),
         dias_alerta_sin_factura=int(os.environ.get("DIAS_ALERTA_SIN_FACTURA", "7")),
         empresa_domicilio=os.environ.get("EMPRESA_DOMICILIO", "Plaza Mayor Ciudad Pegaso 11"),
         empresa_ciudad=os.environ.get("EMPRESA_CIUDAD", "Madrid"),
