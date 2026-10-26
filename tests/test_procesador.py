@@ -55,7 +55,7 @@ class ExtractorFalso:
     def __init__(self, por_nombre):
         self.por_nombre = por_nombre
 
-    def extraer(self, pdf, nombre_archivo):
+    def extraer(self, pdf, nombre_archivo, id_correo=""):
         resultado = self.por_nombre[nombre_archivo]
         if isinstance(resultado, Exception):
             raise resultado

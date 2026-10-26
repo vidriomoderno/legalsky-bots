@@ -154,8 +154,9 @@ def contenido():
             ("Abre Google Chrome.", ""),
             ("Doble clic en «Pedir facturas LegalSky» del Escritorio.",
              "Se abre una ventana negra. <b>No la cierres.</b>"),
-            ("Espera.", "Chrome abre pestañas solo y rellena las páginas de Iberia y Air Europa. "
-                        "<b>No toques esas pestañas.</b> Puede tardar unos minutos."),
+            ("Espera.", "Primero lee los correos nuevos y después Chrome abre pestañas solo y rellena "
+                        "las páginas de Iberia y Air Europa. <b>No toques esas pestañas.</b> Suele tardar "
+                        "unos minutos; <b>la primera vez, bastante más</b> (lee los correos de 6 meses)."),
             ("Lee el resumen.", "Al final la ventana negra dice cuántas facturas pidió."),
             ("Pulsa cualquier tecla.", "La ventana se cierra. ¡Listo!"),
         ]),

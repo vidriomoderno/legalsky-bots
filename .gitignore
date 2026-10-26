@@ -3,5 +3,6 @@ __pycache__/
 .pytest_cache/
 .env
 token.json
+trabajo/
 .claude/settings.local.json
 client_secret*.json

@@ -46,16 +46,20 @@ class BuzonGmail:
         self._etiquetas: dict[str, str] = {}
 
     def correos_pendientes(self, busqueda: str) -> list[Correo]:
-        correos = []
+        return [self.leer(i) for i in self.ids_pendientes(busqueda)]
+
+    def ids_pendientes(self, busqueda: str) -> list[str]:
+        """Ids de los correos que cumplen la búsqueda, del más antiguo al más nuevo
+        (así los billetes suelen registrarse antes que sus facturas)."""
+        ids = []
         peticion = self._api.users().messages().list(userId="me", q=busqueda, maxResults=100)
         while peticion is not None:
             pagina = peticion.execute()
-            for ref in pagina.get("messages", []):
-                correos.append(self._leer(ref["id"]))
+            ids += [ref["id"] for ref in pagina.get("messages", [])]
             peticion = self._api.users().messages().list_next(peticion, pagina)
-        return correos
+        return list(reversed(ids))
 
-    def _leer(self, id_correo: str) -> Correo:
+    def leer(self, id_correo: str) -> Correo:
         mensaje = self._api.users().messages().get(userId="me", id=id_correo, format="full").execute()
         cabeceras = {c["name"].lower(): c["value"] for c in mensaje["payload"].get("headers", [])}
         adjuntos = []

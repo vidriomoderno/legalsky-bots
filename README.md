@@ -26,7 +26,8 @@ Claude (`claude-opus-5-5`) solo lee los PDF y devuelve los datos. Todas las regl
 | `legalsky_bots/extractor.py` | La llamada a Claude con el PDF |
 | `legalsky_bots/modelos.py` | Los campos que se extraen |
 | `legalsky_bots/google_servicios.py` | Gmail, Drive y Sheets |
-| `legalsky_bots/main.py` | Una pasada completa (lo que ejecuta Cloud Run) |
+| `legalsky_bots/main.py` | Una pasada completa con la API de Claude (opcional, necesita `ANTHROPIC_API_KEY`) |
+| `scripts/cola_pdf.py` | Lectura de PDF sin clave: baja los PDF a `trabajo/` y registra lo que Claude leyó |
 | `scripts/preparar.py` | Autorización inicial y creación de carpeta y hoja |
 | `tests/` | Tests con servicios simulados; no gastan API |
 
@@ -84,7 +85,7 @@ pytest
 ```
 
 Para probar contra el Gmail real desde un PC, copia `.env.example` a `.env`, rellénalo,
-carga las variables y ejecuta `python -m legalsky_bots.main`. Ojo: etiqueta los correos
+carga las variables y ejecuta `python -m legalsky_bots.main` (requiere `ANTHROPIC_API_KEY`). Ojo: etiqueta los correos
 y escribe en la hoja de verdad.
 
 ## Bot 2: pedir la factura en la web (apagado)
@@ -107,11 +108,18 @@ por defecto en la nube.
 
 ### Cómo lo ejecuta Fede: doble clic en `pedir_facturas.bat`
 
-Con **Google Chrome abierto**, doble clic en `pedir_facturas.bat`. Claude (Claude Code) trabaja
-en pestañas nuevas de ese Chrome con la extensión Claude in Chrome: lee el Gmail, pide cada
-factura pendiente siguiendo `tarea_pc/INSTRUCCIONES.md`, la anota en la hoja y al final
-muestra un resumen. Solo tiene permiso para los scripts del proyecto y para Chrome.
-`leer_gmail.bat` hace solo la parte del Gmail, sin pedir facturas.
+Con **Google Chrome abierto**, doble clic en `pedir_facturas.bat`. Claude (Claude Code, con la
+cuenta de Claude de Fede) hace la skill `pedir-facturas`:
+
+1. **Lee el Gmail sin clave de API:** `scripts/cola_pdf.py bajar` baja los PDF de 15 en 15 a
+   `trabajo/`, Claude los lee y escribe `trabajo/extraccion.json`, y
+   `scripts/cola_pdf.py registrar` los guarda en Drive, la hoja y las etiquetas de Gmail.
+2. **Pide las facturas** en pestañas nuevas de Chrome siguiendo `tarea_pc/INSTRUCCIONES.md`.
+3. Muestra un resumen.
+
+Solo tiene permiso para los scripts del proyecto, leer los PDF, escribir en `trabajo/` y
+Chrome. La primera vez hay unos 190 correos de los últimos 6 meses, así que tarda bastante
+más que las siguientes.
 
 **Instalación en el PC de Fede: la hace el propio `.bat`.** Se le mandan tres archivos
 (`pedir_facturas.bat`, `.env` y `token.json`), los guarda juntos y hace doble clic. La primera

@@ -83,7 +83,7 @@ class Hoja(Protocol):
 
 
 class Extractor(Protocol):
-    def extraer(self, pdf: bytes, nombre_archivo: str) -> DocumentoVuelo | None: ...
+    def extraer(self, pdf: bytes, nombre_archivo: str, id_correo: str = "") -> DocumentoVuelo | None: ...
 
 
 class Solicitador(Protocol):
@@ -172,7 +172,7 @@ class Procesador:
 
     # Devuelve True si el adjunto necesita revisión humana.
     def _procesar_adjunto(self, correo: Correo, adjunto: AdjuntoPdf, resumen: Resumen) -> bool:
-        doc = self.extractor.extraer(adjunto.contenido, adjunto.nombre)
+        doc = self.extractor.extraer(adjunto.contenido, adjunto.nombre, id_correo=correo.id)
         if doc is None:
             resumen.errores += 1
             return True
@@ -226,7 +226,25 @@ class Procesador:
             "Id correo": correo.id,
         })
         resumen.billetes_nuevos += 1
+        self._emparejar_factura_previa(doc)
         return doc.confianza == "baja"
+
+    def _emparejar_factura_previa(self, doc: DocumentoVuelo) -> None:
+        """Si la factura de este billete llegó antes que el billete, se emparejan ahora."""
+        numeros = {_solo_digitos(n) for n in doc.numeros_billete if _solo_digitos(n)}
+        localizador = (doc.localizador or "").strip().upper()
+        for factura in self.hoja.filas(PESTANA_FACTURAS):
+            if factura.get("Estado") != FACTURA_SIN_BILLETE:
+                continue
+            de_factura = {_solo_digitos(n) for n in factura.get("Nº billete", "").split(",")}
+            if not (numeros & de_factura or (localizador and factura.get("Localizador", "").strip().upper() == localizador)):
+                continue
+            billete = self._buscar_billete(self.hoja.filas(PESTANA_BILLETES), doc)
+            self.hoja.actualizar(PESTANA_FACTURAS, int(factura["_fila"]), COLUMNAS_FACTURAS, {"Estado": FACTURA_OK})
+            self.hoja.actualizar(PESTANA_BILLETES, int(billete["_fila"]), COLUMNAS_BILLETES, {
+                "Estado": ESTADO_FACTURADO, "Factura": factura.get("Nº factura") or factura.get("PDF", ""),
+            })
+            return
 
     def _registrar_factura(self, correo: Correo, adjunto: AdjuntoPdf, doc: DocumentoVuelo, resumen: Resumen) -> bool:
         if doc.numero_factura and any(

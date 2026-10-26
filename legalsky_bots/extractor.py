@@ -38,7 +38,7 @@ class Extractor:
     def __init__(self, cliente: anthropic.Anthropic | None = None):
         self._cliente = cliente or anthropic.Anthropic()
 
-    def extraer(self, pdf: bytes, nombre_archivo: str) -> DocumentoVuelo | None:
+    def extraer(self, pdf: bytes, nombre_archivo: str, id_correo: str = "") -> DocumentoVuelo | None:
         """Devuelve None si Claude no pudo procesar el documento (para revisión manual)."""
         respuesta = self._cliente.beta.messages.parse(
             model=MODELO,
