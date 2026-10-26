@@ -15,7 +15,7 @@ rem ======================================================================
 
 rem ---- Configuracion (la cambia Juan Fernando) ----
 rem ZIP con el codigo del programa (repositorio de GitHub de LegalSky).
-set "ORIGEN=https://github.com/CAMBIAR-USUARIO/legalsky-bots/archive/refs/heads/main.zip"
+set "ORIGEN=https://github.com/vidriomoderno/legalsky-bots/archive/refs/heads/main.zip"
 if defined LEGALSKY_ORIGEN set "ORIGEN=%LEGALSKY_ORIGEN%"
 set "EXTENSION_CHROME=https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn"
 if not defined LEGALSKY_DESTINO set "LEGALSKY_DESTINO=%USERPROFILE%\Documents\bot legal sky"
