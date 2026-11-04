@@ -4,5 +4,7 @@ __pycache__/
 .env
 token.json
 trabajo/
+resultados/
 .claude/settings.local.json
 client_secret*.json
+entrega/

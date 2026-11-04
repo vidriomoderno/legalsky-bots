@@ -118,8 +118,8 @@ def contenido():
         "Una <b>cuenta de Claude</b> con plan <b>Pro o Max</b> (el plan gratis no sirve).",
         "Un <b>PC con Windows 10 u 11</b> y conexión a internet.",
         "<b>Google Chrome</b> instalado, con la sesión de <b>legalskybarcelona@gmail.com</b>.",
-        "Tres archivos que te manda Juan Fernando: <b>pedir_facturas.bat</b>, <b>.env</b> y "
-        "<b>token.json</b>. Los dos últimos son secretos: no los compartas.",
+        "Cuatro archivos que te manda Juan Fernando: <b>pedir_facturas.bat</b>, <b>buscar_vuelos.bat</b>, "
+        "<b>.env</b> y <b>token.json</b>. Los dos últimos son secretos: no los compartas.",
     ], VERDE_CLARO))
     s.append(Spacer(1, 4))
     s.append(caja(Paragraph(
@@ -129,12 +129,15 @@ def contenido():
     s.append(KeepTogether([
         Paragraph("La primera vez", h1),
         pasos([
-            ("Guarda los 3 archivos juntos en la misma carpeta.", "Por ejemplo, en Descargas."),
-            ("Haz doble clic en «pedir_facturas.bat».", "Espera mientras instala. Tarda unos minutos."),
+            ("Guarda los 4 archivos juntos en la misma carpeta.", "Por ejemplo, en Descargas."),
+            ("Haz doble clic en «pedir_facturas.bat».",
+             "Si Windows dice «Windows protegió su PC», pulsa «Más información» y «Ejecutar de todas formas». "
+             "Espera mientras instala. Tarda unos minutos."),
             ("Si se abre la página de Claude, entra con tu cuenta.", "Después vuelve a la ventana negra."),
             ("Si se abre la extensión «Claude in Chrome», pulsa «Añadir a Chrome».",
              "Entra con tu misma cuenta de Claude, vuelve a la ventana negra y pulsa una tecla."),
-            ("Listo.", "Desde ahora usa el acceso directo <b>«Pedir facturas LegalSky»</b> del Escritorio."),
+            ("Listo.", "Desde ahora usa los accesos directos del Escritorio: <b>«Pedir facturas LegalSky»</b> "
+                       "y <b>«Buscar vuelos LegalSky»</b>."),
         ]),
     ]))
 
@@ -166,6 +169,22 @@ def contenido():
         "<b>¿Cada cuánto?</b> Cuando quieras. Lo normal: <b>una vez por semana</b>. "
         "Las facturas de Air Europa solo se pueden pedir 2 días después de comprar el billete; "
         "si aún no toca, el bot lo intenta la próxima vez.", texto), AZUL_CLARO))
+
+    s.append(KeepTogether([
+        Paragraph("Buscar vuelos baratos", h1),
+        pasos([
+            ("Abre Google Chrome.", ""),
+            ("Doble clic en «Buscar vuelos LegalSky» del Escritorio.", "Se abre una ventana negra."),
+            ("Elige con el teclado.", "Aeropuerto (Madrid o Barcelona), terminal y nacional o internacional."),
+            ("Espera unos minutos.", "No toques la pestaña que abre Chrome."),
+            ("Mira las 5 opciones más baratas.", "Se abren en una página. El bot <b>no compra nada</b>: compras tú, "
+                                                "con el correo legalskybarcelona@gmail.com."),
+        ]),
+        Spacer(1, 6),
+        caja(Paragraph(
+            "Solo muestra vuelos que salen entre <b>2 h 30 min y 12 horas</b> después de buscar, y marca los "
+            "que salen de 8 a 12 horas. <b>Confirma la terminal</b> en la tarjeta de embarque.", texto), AZUL_CLARO),
+    ]))
 
     s.append(KeepTogether([
         Paragraph("4. Qué significa la hoja de control", h1),

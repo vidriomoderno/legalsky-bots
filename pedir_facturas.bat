@@ -74,7 +74,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$raiz = Get-ChildItem (Join-Path $tmp 'x') -Recurse -Filter 'requirements.txt' | Select-Object -First 1;" ^
   "if (-not $raiz) { throw 'El ZIP no contiene el programa' };" ^
   "New-Item -ItemType Directory -Force $env:DESTINO | Out-Null;" ^
-  "Copy-Item (Join-Path $raiz.DirectoryName '*') $env:DESTINO -Recurse -Force -Exclude '.env','token.json';" ^
+  "Copy-Item (Join-Path $raiz.DirectoryName '*') $env:DESTINO -Recurse -Force -Exclude '.env','token.json','pedir_facturas.bat';" ^
   "Remove-Item $tmp -Recurse -Force"
 if errorlevel 1 (
   if exist "%DESTINO%\legalsky_bots\main.py" (
@@ -91,6 +91,10 @@ if not defined LEGALSKY_SOLO_INSTALAR powershell -NoProfile -Command ^
   "$lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Pedir facturas LegalSky.lnk';" ^
   "if (-not (Test-Path $lnk)) { $s=(New-Object -ComObject WScript.Shell).CreateShortcut($lnk);" ^
   "$s.TargetPath=(Join-Path $env:DESTINO 'pedir_facturas.bat'); $s.WorkingDirectory=$env:DESTINO; $s.Save() }" >nul 2>nul
+if not defined LEGALSKY_SOLO_INSTALAR powershell -NoProfile -Command ^
+  "$lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Buscar vuelos LegalSky.lnk';" ^
+  "if (-not (Test-Path $lnk)) { $s=(New-Object -ComObject WScript.Shell).CreateShortcut($lnk);" ^
+  "$s.TargetPath=(Join-Path $env:DESTINO 'buscar_vuelos.bat'); $s.WorkingDirectory=$env:DESTINO; $s.Save() }" >nul 2>nul
 :programa_ok
 
 cd /d "%DESTINO%"

@@ -88,6 +88,26 @@ Para probar contra el Gmail real desde un PC, copia `.env.example` a `.env`, rel
 carga las variables y ejecuta `python -m legalsky_bots.main` (requiere `ANTHROPIC_API_KEY`). Ojo: etiqueta los correos
 y escribe en la hoja de verdad.
 
+## Buscar vuelos baratos
+
+Con Google Chrome abierto, doble clic en `buscar_vuelos.bat` (o `/buscar-vuelos` en Claude).
+Un menú pide aeropuerto (Madrid-Barajas o Barcelona-El Prat), terminal y nacional o
+internacional. Claude lee Google Flights en una pestaña nueva y al final se abre una página
+con las 5 opciones más baratas, guardada en `resultados/`. No compra nada.
+
+Reglas (`legalsky_bots/vuelos.py`):
+
+- Nunca un vuelo que salga en menos de 2 h 30 min.
+- Busca vuelos que salgan en las próximas 12 h como máximo (`MAXIMO_ANTES_DE_SALIR`). Manda el
+  precio; a igual precio gana el que sale dentro de 8 a 12 h, y esos vuelos se marcan como
+  "horario ideal".
+- Consulta los 12 destinos principales de cada aeropuerto y tipo (lista `DESTINOS`). Un destino
+  fuera de esa lista no se revisa.
+- La terminal se deduce de la aerolínea con la lista oficial de Aena (Madrid T1, T2 y T4, que
+  incluye T4S; Barcelona T1 y T2). Hay aerolíneas en dos terminales, como Air Europa en Madrid,
+  así que hay que confirmarla en la tarjeta de embarque. Si cambia la lista de Aena, se actualiza
+  `AEROLINEAS_POR_TERMINAL`.
+
 ## Bot 2: pedir la factura en la web (apagado)
 
 `legalsky_bots/solicitud_facturas.py` tiene las recetas de los formularios, revisadas a
