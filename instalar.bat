@@ -103,7 +103,7 @@ if not defined LEGALSKY_PRUEBA (
   echo.
   echo  ULTIMO PASO: en Chrome se abre la extension "Claude in Chrome".
   echo  Pulsa "Anadir a Chrome" y entra con tu MISMA cuenta de Claude.
-  start "" "%EXTENSION_CHROME%"
+  call :abrir_en_chrome "%EXTENSION_CHROME%"
 )
 echo.
 echo  ============================================================
@@ -142,6 +142,14 @@ python -c "import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)" >nul 2
 py -3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)" >nul 2>nul || exit /b
 for /f "delims=" %%D in ('py -3 -c "import sys, os; print(os.path.dirname(sys.executable))"') do set "PATH=%%D;%%D\Scripts;%PATH%"
 set "PY=python"
+exit /b
+
+:abrir_en_chrome
+rem La extension es de Chrome: abre la pagina en Chrome aunque el navegador predeterminado sea Edge.
+for %%C in ("%ProgramFiles%\Google\Chrome\Application\chrome.exe" "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" "%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe") do (
+  if exist "%%~C" (start "" "%%~C" "%~1" & exit /b)
+)
+start "" "%~1"
 exit /b
 
 :buscar_claude
