@@ -89,7 +89,9 @@ call "%CLAUDE%" auth status >nul 2>nul
 if not errorlevel 1 goto :sesion_ok
 echo.
 echo  Ahora se abre el navegador para entrar con tu cuenta de Claude (Pro o Max).
-echo  Entra, pulsa Autorizar, vuelve a esta ventana y espera.
+echo  1. Entra con la cuenta y pulsa Autorizar.
+echo  2. Si la pagina te muestra un CODIGO, pulsa "Copiar", vuelve a esta ventana,
+echo     haz clic derecho para pegarlo y pulsa Enter.
 call "%CLAUDE%" auth login
 call "%CLAUDE%" auth status >nul 2>nul
 if errorlevel 1 (echo. & echo  No se pudo iniciar sesion en Claude. Vuelve a intentarlo o llama a Juan Fernando. & goto :fin_error)
