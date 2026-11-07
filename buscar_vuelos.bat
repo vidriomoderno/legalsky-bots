@@ -5,21 +5,8 @@ title LegalSky - Buscar vuelos baratos
 cd /d "%~dp0"
 rem Si se abre desde otra carpeta (por ejemplo la del ZIP), se usa el programa ya instalado.
 if not exist "scripts\buscar_vuelos.py" cd /d "%USERPROFILE%\Documents\bot legal sky" 2>nul
-if not exist "scripts\buscar_vuelos.py" (echo Primero haz doble clic en pedir_facturas.bat para instalar el programa. & pause & exit /b 1)
-set "PATH=%USERPROFILE%\.local\bin;%LOCALAPPDATA%\Programs\Python\Python312;%PATH%"
-
-where claude >nul 2>nul || (echo No se encuentra Claude Code. Ejecuta primero pedir_facturas.bat. & pause & exit /b 1)
-where python >nul 2>nul || (echo No se encuentra Python. Ejecuta primero pedir_facturas.bat. & pause & exit /b 1)
-
-rem Cuenta de Claude: si no hay sesion iniciada, se abre el navegador para entrar.
-claude auth status >nul 2>nul
-if errorlevel 1 (
-  echo.
-  echo  Ahora se abre el navegador para entrar con tu cuenta de Claude.
-  echo  Entra, pulsa Autorizar, vuelve a esta ventana y espera.
-  claude auth login
-  claude auth status >nul 2>nul || (echo  No se pudo iniciar sesion en Claude. Llama a Juan Fernando. & pause & exit /b 1)
-)
+if not exist "scripts\buscar_vuelos.py" (echo. & echo  Primero haz doble clic en instalar.bat. & goto :fin)
+call entorno.bat || goto :fin
 
 echo.
 echo  ==========  LegalSky - Buscar vuelos baratos  ==========
@@ -66,15 +53,18 @@ echo  Claude trabaja en una pestana nueva de Chrome: no la cierres. Tarda unos m
 echo.
 if exist trabajo\ultimo.txt del trabajo\ultimo.txt
 rem Permisos justos: el script de vuelos, leer y escribir en trabajo\ y Chrome. No compra nada.
-claude -p "Usa la skill buscar-vuelos con aeropuerto %AEROPUERTO%, terminal %TERMINAL% y tipo %TIPO%. Siguela completa y escribe el resumen en espanol." --chrome ^
+call "%CLAUDE%" -p "Usa la skill buscar-vuelos con aeropuerto %AEROPUERTO%, terminal %TERMINAL% y tipo %TIPO%. Siguela completa y escribe el resumen en espanol." --chrome ^
   --allowedTools "Skill(buscar-vuelos)" "Read" "Edit(./trabajo/**)" "Bash(python scripts/buscar_vuelos.py:*)" "Bash(python scripts\buscar_vuelos.py:*)" "mcp__claude-in-chrome"
 
 echo.
-if exist trabajo\ultimo.txt (
-  set /p RESULTADO=<trabajo\ultimo.txt
-  call start "" "%%RESULTADO%%"
-) else (
+if not exist trabajo\ultimo.txt (
   echo  No se generaron resultados. Revisa que Chrome este abierto y vuelve a intentarlo.
+  goto :fin
 )
+set /p RESULTADO=<trabajo\ultimo.txt
+echo  Resultado: %RESULTADO%
+if not defined LEGALSKY_PRUEBA start "" "%RESULTADO%"
+
+:fin
 echo.
-pause
+if not defined LEGALSKY_SIN_PAUSA pause
