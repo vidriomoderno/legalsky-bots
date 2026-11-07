@@ -39,6 +39,7 @@ set "ORIGEN=https://github.com/vidriomoderno/legalsky-bots/archive/refs/heads/ma
 if exist "%~dp0.origen" set /p ORIGEN=<"%~dp0.origen"
 if defined LEGALSKY_ORIGEN set "ORIGEN=%LEGALSKY_ORIGEN%"
 set "DESTINO=%~dp0"
+echo  Buscando actualizaciones del programa...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "try { $tmp = Join-Path $env:TEMP ('legalsky_' + [guid]::NewGuid()); New-Item -ItemType Directory $tmp | Out-Null;" ^
   "$zip = Join-Path $tmp 'codigo.zip';" ^
@@ -47,7 +48,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$raiz = Get-ChildItem (Join-Path $tmp 'x') -Recurse -Filter 'requirements.txt' | Select-Object -First 1;" ^
   "if ($raiz) { Copy-Item (Join-Path $raiz.DirectoryName '*') $env:DESTINO -Recurse -Force -Exclude '*.bat','.env','token.json' };" ^
   "Remove-Item $tmp -Recurse -Force } catch { Write-Host '  (Sin actualizar: se usa la version instalada.)' }"
+rem Los componentes solo se reinstalan si cambio requirements.txt (tarda uno o dos minutos).
+fc /b "%~dp0requirements.txt" "%~dp0.requirements_instalados" >nul 2>nul && exit /b 0
+echo  Instalando componentes nuevos (puede tardar uno o dos minutos)...
 %PY% -m pip install --quiet --disable-pip-version-check -r "%~dp0requirements.txt" >nul 2>nul
+if not errorlevel 1 copy /y "%~dp0requirements.txt" "%~dp0.requirements_instalados" >nul
 exit /b 0
 
 :buscar_python

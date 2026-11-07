@@ -66,6 +66,7 @@ if /i not "%AQUI%"=="%DESTINO%\" copy /y "%~f0" "%DESTINO%\instalar.bat" >nul
 cd /d "%DESTINO%"
 %PY% -m pip install --quiet --disable-pip-version-check -r requirements.txt
 if errorlevel 1 (echo. & echo  No se pudieron instalar los componentes. Revisa internet o llama a Juan Fernando. & goto :fin_error)
+copy /y requirements.txt .requirements_instalados >nul
 echo [3/6] Programa listo en "%DESTINO%".
 
 rem ------------------------------------------------- 4. Archivos secretos
