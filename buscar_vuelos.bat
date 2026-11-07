@@ -54,7 +54,7 @@ echo.
 if exist trabajo\ultimo.txt del trabajo\ultimo.txt
 rem Permisos justos: el script de vuelos, leer y escribir en trabajo\ y Chrome. No compra nada.
 call "%CLAUDE%" -p "Usa la skill buscar-vuelos con aeropuerto %AEROPUERTO%, terminal %TERMINAL% y tipo %TIPO%. Siguela completa y escribe el resumen en espanol." --chrome ^
-  --allowedTools "Skill(buscar-vuelos)" "Read" "Edit(./trabajo/**)" "Bash(python scripts/buscar_vuelos.py:*)" "Bash(python scripts\buscar_vuelos.py:*)" "mcp__claude-in-chrome"
+  --allowedTools "Skill(buscar-vuelos)" "Read" "Edit(./trabajo/**)" "Bash(python scripts/buscar_vuelos.py *)" "Bash(python scripts\buscar_vuelos.py *)" "PowerShell(python scripts/buscar_vuelos.py *)" "PowerShell(python scripts\buscar_vuelos.py *)" "mcp__claude-in-chrome"
 
 echo.
 if not exist trabajo\ultimo.txt (
