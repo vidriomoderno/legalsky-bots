@@ -11,6 +11,16 @@ set "PATH=%USERPROFILE%\.local\bin;%LOCALAPPDATA%\Programs\Python\Python312;%PAT
 where claude >nul 2>nul || (echo No se encuentra Claude Code. Ejecuta primero pedir_facturas.bat. & pause & exit /b 1)
 where python >nul 2>nul || (echo No se encuentra Python. Ejecuta primero pedir_facturas.bat. & pause & exit /b 1)
 
+rem Cuenta de Claude: si no hay sesion iniciada, se abre el navegador para entrar.
+claude auth status >nul 2>nul
+if errorlevel 1 (
+  echo.
+  echo  Ahora se abre el navegador para entrar con tu cuenta de Claude.
+  echo  Entra, pulsa Autorizar, vuelve a esta ventana y espera.
+  claude auth login
+  claude auth status >nul 2>nul || (echo  No se pudo iniciar sesion en Claude. Llama a Juan Fernando. & pause & exit /b 1)
+)
+
 echo.
 echo  ==========  LegalSky - Buscar vuelos baratos  ==========
 echo  Antes de seguir: Google Chrome abierto con la extension Claude in Chrome.
@@ -57,7 +67,7 @@ echo.
 if exist trabajo\ultimo.txt del trabajo\ultimo.txt
 rem Permisos justos: el script de vuelos, leer y escribir en trabajo\ y Chrome. No compra nada.
 claude -p "Usa la skill buscar-vuelos con aeropuerto %AEROPUERTO%, terminal %TERMINAL% y tipo %TIPO%. Siguela completa y escribe el resumen en espanol." --chrome ^
-  --allowedTools "Skill(buscar-vuelos)" "Read" "Write(./trabajo/**)" "Bash(python scripts/buscar_vuelos.py:*)" "Bash(python scripts\buscar_vuelos.py:*)" "mcp__claude-in-chrome"
+  --allowedTools "Skill(buscar-vuelos)" "Read" "Edit(./trabajo/**)" "Bash(python scripts/buscar_vuelos.py:*)" "Bash(python scripts\buscar_vuelos.py:*)" "mcp__claude-in-chrome"
 
 echo.
 if exist trabajo\ultimo.txt (

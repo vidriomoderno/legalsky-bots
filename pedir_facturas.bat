@@ -149,7 +149,7 @@ echo.
 rem Permisos justos: los scripts del programa, leer los PDF, escribir en trabajo\ y Chrome.
 rem Claude lee los PDF con la cuenta de Claude de Fede: no hace falta clave de API.
 claude -p "Usa la skill pedir-facturas y siguela completa. Al final escribe el resumen en espanol." --chrome ^
-  --allowedTools "Skill(pedir-facturas)" "Read" "Write(./trabajo/**)" "Bash(python scripts/cola_pdf.py:*)" "Bash(python scripts\cola_pdf.py:*)" "Bash(python scripts/cola_pc.py:*)" "Bash(python scripts\cola_pc.py:*)" "mcp__claude-in-chrome"
+  --allowedTools "Skill(pedir-facturas)" "Read" "Edit(./trabajo/**)" "Bash(python scripts/cola_pdf.py:*)" "Bash(python scripts\cola_pdf.py:*)" "Bash(python scripts/cola_pc.py:*)" "Bash(python scripts\cola_pc.py:*)" "mcp__claude-in-chrome"
 echo.
 echo ------------------------------------------------------------
 %PY% scripts\cola_pc.py resumen
