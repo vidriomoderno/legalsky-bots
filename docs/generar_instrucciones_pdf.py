@@ -106,7 +106,7 @@ def tabla(cabecera, filas, fondo_cabecera=AZUL):
 
 def contenido():
     s = []
-    s += [Paragraph("Bot de facturas LegalSky", titulo), Spacer(1, 4),
+    s += [Paragraph("Bots de LegalSky", titulo), Spacer(1, 4),
           Paragraph("Instrucciones para Fede", subtitulo), Spacer(1, 10)]
     s.append(caja(Paragraph(
         "<b>¿Qué hace?</b> Pide solo las facturas de los billetes de Iberia y Air Europa "
@@ -118,22 +118,24 @@ def contenido():
         "Una <b>cuenta de Claude</b> con plan <b>Pro o Max</b> (el plan gratis no sirve).",
         "Un <b>PC con Windows 10 u 11</b> y conexión a internet.",
         "<b>Google Chrome</b> instalado, con la sesión de <b>legalskybarcelona@gmail.com</b>.",
-        "Cuatro archivos que te manda Juan Fernando: <b>pedir_facturas.bat</b>, <b>buscar_vuelos.bat</b>, "
-        "<b>.env</b> y <b>token.json</b>. Los dos últimos son secretos: no los compartas.",
+        "Tres archivos que te manda Juan Fernando: <b>instalar.bat</b>, <b>.env</b> y <b>token.json</b>. "
+        "Los dos últimos son secretos: no los compartas.",
     ], VERDE_CLARO))
     s.append(Spacer(1, 4))
     s.append(caja(Paragraph(
         "<b>Lo demás lo instala el programa solo</b> la primera vez: Python, Claude Code, la carpeta "
-        "«bot legal sky» en Documentos y un acceso directo en el Escritorio.", texto), AZUL_CLARO))
+        "«bot legal sky» en Documentos y dos accesos directos en el Escritorio.", texto), AZUL_CLARO))
 
     s.append(KeepTogether([
         Paragraph("La primera vez", h1),
         pasos([
-            ("Guarda los 4 archivos juntos en la misma carpeta.", "Por ejemplo, en Descargas."),
-            ("Haz doble clic en «pedir_facturas.bat».",
+            ("Guarda los 3 archivos juntos en la misma carpeta.", "Por ejemplo, en Descargas."),
+            ("Haz doble clic en «instalar.bat».",
              "Si Windows dice «Windows protegió su PC», pulsa «Más información» y «Ejecutar de todas formas». "
-             "Espera mientras instala. Tarda unos minutos."),
-            ("Si se abre la página de Claude, entra con tu cuenta.", "Después vuelve a la ventana negra."),
+             "Espera mientras instala: unos minutos, y a ratos la ventana no muestra nada."),
+            ("Si se abre la página de Claude, entra con tu cuenta y pulsa «Autorizar».",
+             "No cierres la ventana negra. Si la página te da un <b>código</b>, cópialo, pégalo en la ventana "
+             "negra con clic derecho y pulsa Enter."),
             ("Si se abre la extensión «Claude in Chrome», pulsa «Añadir a Chrome».",
              "Entra con tu misma cuenta de Claude, vuelve a la ventana negra y pulsa una tecla."),
             ("Listo.", "Desde ahora usa los accesos directos del Escritorio: <b>«Pedir facturas LegalSky»</b> "
@@ -205,7 +207,9 @@ def contenido():
             ["«No se pudo instalar…» o «No se pudo descargar…»",
              "Revisa internet y vuelve a hacer doble clic. Si sigue, llama a Juan Fernando."],
             ["«Faltan los archivos secretos»",
-             "Pon .env y token.json junto al archivo y vuelve a hacer doble clic."],
+             "Pon .env y token.json junto a instalar.bat y vuelve a hacer doble clic."],
+            ["«Primero haz doble clic en instalar.bat» o «No se encuentra…»",
+             "Haz doble clic en instalar.bat (junto a .env y token.json). Se puede repetir sin problema."],
             ["Un billete dice «Revisar: pedir la factura a mano»",
              "Pide esa factura tú en la web: iberia.com/es/facturas o aireuropa.com (Facturas). "
              "Los datos están en la hoja."],
@@ -231,6 +235,6 @@ def numerar(canvas, doc):
 if __name__ == "__main__":
     doc = SimpleDocTemplate(str(SALIDA), pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm,
                             topMargin=16 * mm, bottomMargin=18 * mm,
-                            title="Bot de facturas LegalSky - Instrucciones para Fede", author="LegalSky")
+                            title="Bots de LegalSky - Instrucciones para Fede", author="LegalSky")
     doc.build(contenido(), onFirstPage=numerar, onLaterPages=numerar)
     print(SALIDA)
