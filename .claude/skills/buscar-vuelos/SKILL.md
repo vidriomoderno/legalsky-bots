@@ -50,6 +50,36 @@ reglas (mínimo 2 h 30 min antes de salir, terminal, los 5 más baratos). Luego 
 python scripts/buscar_vuelos.py resultado trabajo/vuelos_leidos.json
 ```
 
-Muestra esas 5 opciones tal cual y añade: cuántos destinos revisaste, que el precio es orientativo
-y que la terminal se confirma en la tarjeta de embarque. Si hay menos de 5, di cuántas y por qué.
-Cierra las pestañas que abriste.
+Deja las opciones elegidas, numeradas, en `trabajo/elegidos.json`.
+
+## 4. Enlace de la web de la aerolínea
+
+Para cada opción de `trabajo/elegidos.json`, consigue el enlace de ese vuelo en la web **de la
+propia aerolínea** (no de una agencia):
+
+1. Abre su `enlace` (la búsqueda de Google Flights) y pulsa el vuelo con esa aerolínea, hora de
+   salida y precio.
+2. En "Opciones de reserva", elige la de la aerolínea ("Reservar con Iberia", "Reservar con
+   Vueling"…), nunca una agencia (eDreams, Kiwi, Mytrip…). Pulsa su botón "Continuar".
+3. Se abre la web de la aerolínea, normalmente en una pestaña nueva. Anota la dirección (URL) de
+   esa pestaña en cuanto esté en la web de la aerolínea, **aunque la página muestre un error o no
+   termine de cargar**: el enlace lleva la ruta y la fecha y a Fede le abrirá en su Chrome. **No
+   rellenes nada, no elijas tarifa ni pulses nada más allí.** Cierra esa pestaña.
+4. Si Google no ofrece la aerolínea (solo agencias) o sale un CAPTCHA, deja esa opción sin enlace.
+
+**Después de cada opción** (no al final), reescribe `trabajo/enlaces_aerolinea.json` con todos los
+enlaces que lleves y ejecuta el comando, para que no se pierdan si te interrumpen:
+
+```
+[{"opcion": 1, "enlace": "https://www.iberia.com/..."}, {"opcion": 2, "enlace": ""}]
+```
+
+```
+python scripts/buscar_vuelos.py enlaces trabajo/enlaces_aerolinea.json
+```
+
+## 5. Resumen
+
+Muestra las 5 opciones con su enlace de la aerolínea (o di que no lo hay) y añade: cuántos
+destinos revisaste, que el precio es orientativo y que la terminal se confirma en la tarjeta de
+embarque. Si hay menos de 5, di cuántas y por qué. Cierra las pestañas que abriste.

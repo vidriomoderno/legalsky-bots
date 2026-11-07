@@ -13,7 +13,7 @@ en la tarjeta de embarque. T4 incluye el satélite T4S.
 import re
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 from zoneinfo import ZoneInfo
 
 ZONA = ZoneInfo("Europe/Madrid")
@@ -88,7 +88,8 @@ class Vuelo:
     precio: float  # euros
     escalas: int = 0
     llegada: str = ""
-    enlace: str = ""
+    enlace: str = ""  # la búsqueda de Google Flights
+    enlace_aerolinea: str = ""  # la página de la aerolínea con ese vuelo (paso 4 de la skill)
 
 
 def ahora_en_espana() -> datetime:
@@ -143,7 +144,22 @@ def vuelo_desde_dict(d: dict) -> Vuelo:
         salida=salida.replace(tzinfo=ZONA) if salida.tzinfo is None else salida,
         precio=float(d["precio"]), escalas=int(d.get("escalas") or 0),
         llegada=str(d.get("llegada") or ""), enlace=str(d.get("enlace") or ""),
+        enlace_aerolinea=str(d.get("enlace_aerolinea") or ""),
     )
+
+
+def enlace_de_aerolinea(url: str) -> str:
+    """El enlace si es una página web de verdad fuera de Google (la de la aerolínea); si no, ""."""
+    partes = urlsplit(str(url or "").strip())
+    host = (partes.hostname or "").lower()
+    if partes.scheme != "https" or not host or re.search(r"(^|\.)google\.[a-z.]+$", host):
+        return ""
+    return partes.geturl()
+
+
+def dominio(url: str) -> str:
+    host = (urlsplit(url).hostname or "").lower()
+    return host[4:] if host.startswith("www.") else host
 
 
 def a_dict(v: Vuelo) -> dict:

@@ -4,6 +4,7 @@ import pytest
 
 from legalsky_bots.vuelos import (
     ZONA, Busqueda, Vuelo, consultas, en_horario_ideal, mejores, sale_de_terminal, vuelo_desde_dict,
+    dominio, enlace_de_aerolinea,
 )
 
 AHORA = datetime(2026, 11, 4, 10, 0, tzinfo=ZONA)
@@ -86,3 +87,19 @@ def test_horario_ideal_de_8_a_12_horas():
 def test_lee_hora_local_de_espana():
     v = vuelo_desde_dict({"aerolinea": "Vueling", "destino": "BCN", "salida": "2026-11-05T10:10", "precio": "136"})
     assert v.salida.tzinfo is ZONA and v.precio == 136
+
+
+@pytest.mark.parametrize("url, esperado", [
+    ("https://www.iberia.com/es/vuelos/?x=1", "https://www.iberia.com/es/vuelos/?x=1"),
+    ("https://www.google.com/travel/clk?u=abc", ""),
+    ("https://www.google.es/flights", ""),
+    ("http://www.vueling.com/", ""),
+    ("javascript:alert(1)", ""),
+    ("", ""),
+])
+def test_solo_enlaces_web_fuera_de_google(url, esperado):
+    assert enlace_de_aerolinea(url) == esperado
+
+
+def test_dominio_sin_www():
+    assert dominio("https://www.aireuropa.com/es/vuelos") == "aireuropa.com"
