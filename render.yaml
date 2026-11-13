@@ -1,0 +1,22 @@
+# Bot de Telegram de vuelos baratos (LegalSky). Render lo lee al crear el servicio desde GitHub.
+# Las claves se escriben en Render (Environment), nunca aquí.
+services:
+  - type: web
+    name: legalsky-vuelos-telegram
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r requirements-telegram.txt
+    startCommand: uvicorn legalsky_bots.telegram_vuelos:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: SERPAPI_KEY
+        sync: false
+      - key: USUARIOS_PERMITIDOS
+        sync: false
+      - key: WEBHOOK_SECRETO
+        generateValue: true
