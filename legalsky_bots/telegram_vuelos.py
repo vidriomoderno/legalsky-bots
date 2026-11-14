@@ -165,6 +165,33 @@ async def enviar_enlace(chat: int, clave: str, n: int):
                    disable_web_page_preview=True)
 
 
+_solicitudes_avisadas: set[int] = set()
+
+
+def administradores() -> list[int]:
+    """Quién recibe los avisos de acceso: ADMINISTRADORES o, si no, el primero de USUARIOS_PERMITIDOS."""
+    propios = [int(x) for x in _env("ADMINISTRADORES").replace(" ", "").split(",") if x.isdigit()]
+    if propios:
+        return propios
+    primero = _env("USUARIOS_PERMITIDOS").replace(" ", "").split(",")[0]
+    return [int(primero)] if primero.isdigit() else []
+
+
+async def avisar_solicitud(persona: dict):
+    """Avisa al administrador (una vez por persona) de que alguien quiere usar el bot."""
+    if persona["id"] in _solicitudes_avisadas:
+        return
+    _solicitudes_avisadas.add(persona["id"])
+    nombre = " ".join(x for x in (persona.get("first_name"), persona.get("last_name")) if x) or "Sin nombre"
+    alias = f" (@{persona['username']})" if persona.get("username") else ""
+    for admin in administradores():
+        await telegram("sendMessage", chat_id=admin,
+                       text=f"🔔 Solicitud de acceso al bot de vuelos:\n{html.escape(nombre)}{html.escape(alias)}\n"
+                            f"Número de usuario: <code>{persona['id']}</code>\n\n"
+                            "Para darle acceso, añade ese número en USUARIOS_PERMITIDOS (Render).",
+                       parse_mode="HTML")
+
+
 async def atender(aviso: dict):
     """Un aviso de Telegram: un mensaje escrito o un botón pulsado."""
     if "callback_query" in aviso:
@@ -205,8 +232,9 @@ async def atender(aviso: dict):
     chat, usuario = m["chat"]["id"], m["from"]["id"]
     if usuario not in usuarios_permitidos():
         await telegram("sendMessage", chat_id=chat,
-                       text=f"Este bot es solo para el equipo de LegalSky.\nTu número de usuario es {usuario}: "
-                            "pásaselo a Fede para que te dé acceso.")
+                       text=f"Este bot es solo para el equipo de LegalSky. Ya hemos avisado para que te den acceso; "
+                            f"te escribiremos cuando esté listo.\n(Tu número de usuario: {usuario})")
+        await avisar_solicitud(m["from"])
         return
     await telegram("sendMessage", chat_id=chat, text="Hola 👋 ¿Desde qué aeropuerto buscamos vuelos?",
                    reply_markup=teclado_aeropuertos())

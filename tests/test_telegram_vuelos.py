@@ -40,8 +40,14 @@ def _correr(aviso):
 
 
 def test_desconocido_recibe_su_numero_y_no_puede_buscar(enviados):
-    _correr({"message": {"from": {"id": 999}, "chat": {"id": 5}, "text": "/vuelos"}})
+    tg._solicitudes_avisadas.clear()
+    persona = {"id": 999, "first_name": "Ana", "username": "ana_ls"}
+    _correr({"message": {"from": persona, "chat": {"id": 5}, "text": "/vuelos"}})
     assert "999" in enviados[0][1]["text"]
+    aviso = enviados[1][1]
+    assert aviso["chat_id"] == 111 and "Ana (@ana_ls)" in aviso["text"] and "999" in aviso["text"]
+    _correr({"message": {"from": persona, "chat": {"id": 5}, "text": "hola"}})
+    assert sum(1 for m, d in enviados if d.get("chat_id") == 111) == 1  # solo se avisa una vez
     _correr(_boton(999, "x|MAD|T4|nacional"))
     assert enviados[-1] == ("answerCallbackQuery", {"callback_query_id": "q", "text": "No tienes acceso."})
 
