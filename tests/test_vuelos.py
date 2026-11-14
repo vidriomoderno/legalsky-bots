@@ -147,3 +147,14 @@ def test_ninguna_opcion_mezcla_nacional_e_internacional(aeropuerto, terminal, ti
     ]
     destinos = sorted(v.destino for v in mejores(vuelos, b))
     assert destinos == (["LPA", "PMI"] if tipo == "nacional" else ["CMN", "LIS"])
+
+
+def test_todos_los_destinos_tienen_nombre_y_bandera_correcta():
+    from legalsky_bots.vuelos import AEROPUERTOS_ESPANA, DESTINOS, NOMBRES, nombre_lugar
+    for (aeropuerto, tipo), destinos in DESTINOS.items():
+        for d in destinos:
+            assert d in NOMBRES, d
+            es_espana = nombre_lugar(d).startswith("🇪🇸")
+            assert es_espana == (tipo == "nacional"), (aeropuerto, tipo, d)
+    for codigo, (nombre, bandera) in NOMBRES.items():
+        assert (bandera == "🇪🇸") == (codigo in AEROPUERTOS_ESPANA), codigo

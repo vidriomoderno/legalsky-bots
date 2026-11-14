@@ -64,6 +64,32 @@ VLL LEI MJV RMU REU GRO VIT PNA BJZ LEN EAS ODB HSK RJL ABC CDT MLN JCU TOJ QSA 
 """.split())
 
 
+# Nombre y bandera de cada destino o escala, para que el asesor vea de un vistazo si es nacional o no.
+NOMBRES = {
+    "MAD": ("Madrid", "🇪🇸"), "BCN": ("Barcelona", "🇪🇸"), "AGP": ("Málaga", "🇪🇸"), "SVQ": ("Sevilla", "🇪🇸"),
+    "PMI": ("Palma de Mallorca", "🇪🇸"), "VLC": ("Valencia", "🇪🇸"), "BIO": ("Bilbao", "🇪🇸"),
+    "ALC": ("Alicante", "🇪🇸"), "LPA": ("Gran Canaria", "🇪🇸"), "TFN": ("Tenerife Norte", "🇪🇸"),
+    "TFS": ("Tenerife Sur", "🇪🇸"), "SCQ": ("Santiago", "🇪🇸"), "IBZ": ("Ibiza", "🇪🇸"), "OVD": ("Asturias", "🇪🇸"),
+    "GRX": ("Granada", "🇪🇸"), "MAH": ("Menorca", "🇪🇸"), "ACE": ("Lanzarote", "🇪🇸"), "FUE": ("Fuerteventura", "🇪🇸"),
+    "VGO": ("Vigo", "🇪🇸"), "LCG": ("A Coruña", "🇪🇸"), "XRY": ("Jerez", "🇪🇸"), "SDR": ("Santander", "🇪🇸"),
+    "LIS": ("Lisboa", "🇵🇹"), "OPO": ("Oporto", "🇵🇹"), "LON": ("Londres", "🇬🇧"), "LHR": ("Londres", "🇬🇧"),
+    "LGW": ("Londres", "🇬🇧"), "STN": ("Londres", "🇬🇧"), "LTN": ("Londres", "🇬🇧"), "PAR": ("París", "🇫🇷"),
+    "CDG": ("París", "🇫🇷"), "ORY": ("París", "🇫🇷"), "BVA": ("París", "🇫🇷"), "ROM": ("Roma", "🇮🇹"),
+    "FCO": ("Roma", "🇮🇹"), "CIA": ("Roma", "🇮🇹"), "MIL": ("Milán", "🇮🇹"), "MXP": ("Milán", "🇮🇹"),
+    "LIN": ("Milán", "🇮🇹"), "BGY": ("Milán", "🇮🇹"), "BRU": ("Bruselas", "🇧🇪"), "CRL": ("Bruselas", "🇧🇪"),
+    "AMS": ("Ámsterdam", "🇳🇱"), "FRA": ("Fráncfort", "🇩🇪"), "MUC": ("Múnich", "🇩🇪"), "BER": ("Berlín", "🇩🇪"),
+    "DUB": ("Dublín", "🇮🇪"), "CMN": ("Casablanca", "🇲🇦"), "GVA": ("Ginebra", "🇨🇭"), "ZRH": ("Zúrich", "🇨🇭"),
+    "VIE": ("Viena", "🇦🇹"), "IST": ("Estambul", "🇹🇷"), "CPH": ("Copenhague", "🇩🇰"),
+}
+
+
+def nombre_lugar(codigo: str) -> str:
+    """'🇬🇧 Londres' para LON; si no se conoce, el código ('🇪🇸 XXX' si es de España)."""
+    codigo = codigo.upper()
+    nombre, bandera = NOMBRES.get(codigo, (codigo, "🇪🇸" if codigo in AEROPUERTOS_ESPANA else "🌍"))
+    return f"{bandera} {nombre}"
+
+
 def tipo_de_ruta_valido(tipo: str, escalas_en: str, destino: str) -> bool:
     """Nacional: todo el viaje dentro de España. Internacional: el primer vuelo ya sale de España.
 

@@ -157,3 +157,13 @@ def test_ignora_el_aviso_de_mensaje_fijado(enviados):
     _correr({"message": {"from": {"id": 9180987645, "is_bot": True, "first_name": "LegalSky Vuelos"},
                          "chat": {"id": 111}, "pinned_message": {"message_id": 77}}})
     assert not [d for m, d in enviados if m == "sendMessage"]
+
+
+def test_el_mensaje_muestra_ciudades_y_tipo():
+    from legalsky_bots.vuelos import Busqueda as B
+    b = B("MAD", "T1", "internacional", datetime(2026, 11, 14, 17, 33, tzinfo=ZONA))
+    v = Vuelo("Ryanair", "LON", datetime(2026, 11, 14, 20, 20, tzinfo=ZONA), 100)
+    w = Vuelo("TAP", "OPO", datetime(2026, 11, 14, 21, 0, tzinfo=ZONA), 120, escalas=1, escalas_en="LIS")
+    texto = tg.texto_resultado(b, [serp.Opcion(v, ""), serp.Opcion(w, "")])
+    assert "🌍 INTERNACIONAL" in texto and "🇬🇧 Londres" in texto and "escala en 🇵🇹 Lisboa" in texto
+    assert "LON" not in texto

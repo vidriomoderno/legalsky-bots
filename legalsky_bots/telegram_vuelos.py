@@ -30,7 +30,8 @@ from starlette.routing import Route
 
 from legalsky_bots import vuelos_serpapi as serp
 from legalsky_bots.vuelos import (
-    AEROPUERTOS, OPCIONES, TERMINALES, Busqueda, ahora_en_espana, dominio, en_horario_ideal, url_google_flights,
+    AEROPUERTOS, OPCIONES, TERMINALES, Busqueda, ahora_en_espana, dominio, en_horario_ideal, nombre_lugar,
+    url_google_flights,
 )
 
 log = logging.getLogger("legalsky.telegram")
@@ -162,17 +163,19 @@ def teclado_tipo(aeropuerto: str, terminal: str) -> dict:
 
 def texto_resultado(b: Busqueda, opciones: list[serp.Opcion]) -> str:
     terminal = "todas las terminales" if b.terminal == "TODAS" else f"terminal {b.terminal}"
-    cabecera = (f"✈️ <b>{html.escape(AEROPUERTOS[b.aeropuerto])}</b> · {terminal} · {b.tipo}\n"
+    tipo = "🇪🇸 NACIONAL" if b.tipo == "nacional" else "🌍 INTERNACIONAL"
+    cabecera = (f"✈️ <b>{html.escape(AEROPUERTOS[b.aeropuerto])}</b> · {terminal}\n<b>{tipo}</b>\n"
                 f"Salidas entre las {b.desde:%H:%M} y las {b.hasta:%H:%M} ({b.hasta:%d/%m})\n")
     if not opciones:
         return cabecera + "\nNo hay vuelos que cumplan las reglas ahora mismo."
     lineas = []
     for n, o in enumerate(opciones, 1):
         v = o.vuelo
-        escalas = "directo" if v.escalas == 0 else f"escala en {v.escalas_en.replace(',', ', ')}"
+        escalas = ("directo" if v.escalas == 0
+                   else "escala en " + ", ".join(nombre_lugar(e) for e in v.escalas_en.split(",")))
         ideal = " ⭐" if en_horario_ideal(v, b) else ""
-        lineas.append(f"<b>{n}. {v.precio:.0f} €</b> · {v.salida:%H:%M} → {html.escape(v.destino)} · "
-                      f"{html.escape(v.aerolinea)} · {escalas}{ideal}")
+        lineas.append(f"<b>{n}. {v.precio:.0f} €</b> · sale {v.salida:%H:%M}\n"
+                      f"     → {nombre_lugar(v.destino)} · {html.escape(v.aerolinea)} · {escalas}{ideal}")
     pie = ("\n\n⭐ = sale dentro de 8 a 12 horas.\nPulsa un vuelo para abrirlo en la web de la aerolínea. "
            "Confirma la terminal en la tarjeta de embarque.")
     if len(opciones) < OPCIONES:
@@ -190,7 +193,7 @@ async def buscar_y_responder(chat: int, mensaje: int, aeropuerto: str, terminal:
                        text=f"No se pudo buscar ahora mismo ({html.escape(str(e))[:200]}). Prueba otra vez en un minuto.")
         return
     clave = _guardar(_busquedas, b, opciones)
-    filas = [[(f"🔗 {n}. {o.vuelo.aerolinea} · {o.vuelo.precio:.0f} €", f"e|{clave}|{n}")]
+    filas = [[(f"🔗 {n}. {nombre_lugar(o.vuelo.destino)} · {o.vuelo.aerolinea} · {o.vuelo.precio:.0f} €", f"e|{clave}|{n}")]
              for n, o in enumerate(opciones, 1)]
     filas.append([("🔄 Nueva búsqueda", "inicio")])
     await telegram("editMessageText", chat_id=chat, message_id=mensaje, text=texto_resultado(b, opciones),
@@ -206,7 +209,7 @@ async def enviar_enlace(chat: int, clave: str, n: int):
     o = opciones[n - 1]
     v = o.vuelo
     google = url_google_flights(b.aeropuerto, v.destino, v.salida.date().isoformat())
-    titulo = f"<b>{n}. {html.escape(v.aerolinea)}</b> · {b.aeropuerto} → {html.escape(v.destino)} · {v.salida:%d/%m %H:%M} · {v.precio:.0f} €"
+    titulo = f"<b>{n}. {html.escape(v.aerolinea)}</b> · {AEROPUERTOS[b.aeropuerto]} → {nombre_lugar(v.destino)} · {v.salida:%d/%m %H:%M} · {v.precio:.0f} €"
     try:
         enlace, peticion = await run_in_threadpool(serp.enlace_aerolinea, b, o, _env("SERPAPI_KEY"))
     except Exception:  # noqa: BLE001
