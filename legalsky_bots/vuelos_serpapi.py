@@ -60,7 +60,8 @@ def _parametros(b: Busqueda, dia: str, destinos: str, clave: str) -> dict:
     return {
         "engine": "google_flights", "departure_id": b.aeropuerto,
         "arrival_id": destinos, "outbound_date": dia,
-        "type": "2", "stops": "1",  # solo ida y solo vuelos directos
+        "type": "2",  # solo ida
+        "stops": "1" if b.tipo == "internacional" else "0",  # internacional: solo directos; nacional: cualquiera
         "hl": "es", "gl": "es", "currency": "EUR", "api_key": clave,
     }
 

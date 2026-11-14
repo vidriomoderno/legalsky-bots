@@ -71,7 +71,7 @@ def test_una_consulta_por_dia_con_todos_los_destinos():
     b = Busqueda("MAD", "TODAS", "nacional", datetime(2026, 11, 13, 20, 0, tzinfo=ZONA))  # ventana pasa a mañana
     serp.buscar(b, "clave", httpx.Client(transport=httpx.MockTransport(responder)))
     assert [p["outbound_date"] for p in pedidas] == ["2026-11-13"] * 2 + ["2026-11-14"] * 2
-    assert pedidas[0]["stops"] == "1"
+    assert pedidas[0]["stops"] == "0"  # nacional: con escala también sirve
     assert pedidas[0]["type"] == "2" and pedidas[0]["currency"] == "EUR" and "," in pedidas[0]["arrival_id"]
 
 
@@ -107,3 +107,17 @@ def test_redireccion_dentro_de_la_pagina_con_amp():
     c = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, text=pagina)))
     enlace = serp.resolver_enlace({"url": "https://www.google.com/travel/clk/f", "post_data": "u=1"}, c)
     assert enlace == "https://booking.iberiaexpress.com/?from=MAD&to=PMI"
+
+
+def test_internacional_pide_solo_directos():
+    pedidas = []
+    c = httpx.Client(transport=httpx.MockTransport(lambda r: pedidas.append(dict(r.url.params)) or httpx.Response(200, json={})))
+    serp.buscar(Busqueda("BCN", "T1", "internacional", AHORA), "clave", c)
+    assert pedidas and all(p["stops"] == "1" for p in pedidas)
+
+
+def test_nacional_con_escala_en_espana_si_sale():
+    datos = {"best_flights": [{"flights": [_tramo("2026-11-13 19:00", "BCN", "MAD", "Air Europa"),
+                                           _tramo("x", "MAD", "AGP", "Air Europa")], "price": 90, "booking_token": "N"}]}
+    elegidas = serp.mejores_opciones(serp.opciones_desde_respuesta(datos), Busqueda("BCN", "T1", "nacional", AHORA))
+    assert [(o.vuelo.destino, o.vuelo.escalas_en) for o in elegidas] == [("AGP", "MAD")]

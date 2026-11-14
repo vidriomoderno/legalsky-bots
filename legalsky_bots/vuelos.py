@@ -4,7 +4,8 @@ Claude lee los precios en Google Flights con el Chrome de Fede; aquí están las
 - Nunca un vuelo que salga en menos de 2 h 30 min.
 - Lo principal es el precio; a igual precio, mejor si sale dentro de 8 a 12 horas.
 - 5 opciones por búsqueda.
-- Solo vuelos directos: con escala el asesor no puede pasar a la zona internacional.
+- Internacional: solo vuelos directos (con escala el asesor no pasa a la zona internacional).
+- Nacional: con escala también sirve, si todo el viaje es dentro de España.
 
 Las terminales salen de la lista oficial de Aena (aerolíneas por terminal, nov-2026). Son por
 aerolínea, no por vuelo: una aerolínea puede cambiar de terminal, así que hay que confirmarla
@@ -89,6 +90,14 @@ def nombre_lugar(codigo: str) -> str:
     codigo = codigo.upper()
     nombre, bandera = NOMBRES.get(codigo, (codigo, "🇪🇸" if codigo in AEROPUERTOS_ESPANA else "🌍"))
     return f"{bandera} {nombre}"
+
+
+def escalas_permitidas(v: "Vuelo", tipo: str) -> bool:
+    """Regla de LegalSky: internacional solo directo (con escala no se entra a la zona internacional);
+    nacional puede tener escala, siempre que se sepa dónde (y tipo_de_ruta_valido exige que sea en España)."""
+    if tipo == "internacional":
+        return v.escalas == 0 and not v.escalas_en
+    return v.escalas == 0 or bool(v.escalas_en)
 
 
 def tipo_de_ruta_valido(tipo: str, escalas_en: str, destino: str) -> bool:
@@ -177,9 +186,8 @@ def mejores(vuelos: list[Vuelo], b: Busqueda) -> list[Vuelo]:
     """Las 5 opciones más baratas que cumplen las reglas, sin repetir el mismo vuelo."""
     validos = {}
     for v in vuelos:
-        # Solo directos: con escala el asesor no puede pasar a la zona internacional (regla de LegalSky).
         if (b.desde <= v.salida <= b.hasta and sale_de_terminal(v.aerolinea, b.aeropuerto, b.terminal)
-                and v.escalas == 0 and not v.escalas_en and tipo_de_ruta_valido(b.tipo, "", v.destino)):
+                and escalas_permitidas(v, b.tipo) and tipo_de_ruta_valido(b.tipo, v.escalas_en, v.destino)):
             clave = (v.aerolinea.lower(), v.destino, v.salida)
             if clave not in validos or v.precio < validos[clave].precio:
                 validos[clave] = v
