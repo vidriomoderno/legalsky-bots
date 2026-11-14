@@ -250,11 +250,15 @@ async def salud(request: Request):
 
 @asynccontextmanager
 async def _ciclo(app):
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, force=True)
     base = _env("RENDER_EXTERNAL_URL")
+    faltan = [n for n in ("RENDER_EXTERNAL_URL", "TELEGRAM_TOKEN", "WEBHOOK_SECRETO", "SERPAPI_KEY", "USUARIOS_PERMITIDOS")
+              if not _env(n)]
+    print(f"[arranque] direccion publica: {base or '(ninguna)'}; variables vacias: {faltan or 'ninguna'}", flush=True)
     if base.startswith("https://") and _env("TELEGRAM_TOKEN") and _env("WEBHOOK_SECRETO"):
-        await telegram("setWebhook", url=f"{base.rstrip('/')}/telegram", secret_token=_env("WEBHOOK_SECRETO"),
-                       allowed_updates=["message", "callback_query"])
+        r = await telegram("setWebhook", url=f"{base.rstrip('/')}/telegram", secret_token=_env("WEBHOOK_SECRETO"),
+                           allowed_updates=["message", "callback_query"])
+        print(f"[arranque] setWebhook: ok={r.get('ok')} {r.get('description', '')}", flush=True)
         await telegram("setMyCommands", commands=[{"command": "vuelos", "description": "Buscar vuelos baratos"}])
     yield
 
