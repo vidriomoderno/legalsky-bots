@@ -325,8 +325,8 @@ async def atender(aviso: dict):
         return
 
     m = aviso.get("message") or {}
-    if not m.get("from") or "chat" not in m:
-        return
+    if not m.get("from") or "chat" not in m or m["from"].get("is_bot") or "text" not in m:
+        return  # avisos de sistema (p. ej. "mensaje fijado") o de otros bots
     chat, usuario = m["chat"]["id"], m["from"]["id"]
     if usuario not in usuarios_permitidos():
         await telegram("sendMessage", chat_id=chat,

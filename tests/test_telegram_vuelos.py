@@ -151,3 +151,9 @@ def test_comando_dar_solo_para_el_administrador(enviados):
     assert 777 not in tg.usuarios_permitidos()
     _correr({"message": {"from": {"id": 111}, "chat": {"id": 111}, "text": "/dar 777 Fede Lopez"}})
     assert tg._aprobados[777] == "Fede Lopez"
+
+
+def test_ignora_el_aviso_de_mensaje_fijado(enviados):
+    _correr({"message": {"from": {"id": 9180987645, "is_bot": True, "first_name": "LegalSky Vuelos"},
+                         "chat": {"id": 111}, "pinned_message": {"message_id": 77}}})
+    assert not [d for m, d in enviados if m == "sendMessage"]
