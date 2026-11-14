@@ -10,6 +10,7 @@ Variables de entorno:
 Arranque local:  uvicorn legalsky_bots.telegram_vuelos:app --port 8000
 """
 
+import hashlib
 import html
 import logging
 import os
@@ -40,6 +41,12 @@ _redirecciones: dict[str, tuple[float, dict]] = {}
 
 def _env(nombre: str) -> str:
     return os.environ.get(nombre, "").strip()
+
+
+def secreto_telegram() -> str:
+    """Telegram solo acepta letras, números, _ y - en el secreto: se usa un resumen del de Render."""
+    secreto = _env("WEBHOOK_SECRETO")
+    return hashlib.sha256(secreto.encode()).hexdigest() if secreto else ""
 
 
 def usuarios_permitidos() -> set[int]:
@@ -207,7 +214,7 @@ async def atender(aviso: dict):
 
 # ------------------------------------------------------------------ Web
 async def webhook(request: Request):
-    secreto = _env("WEBHOOK_SECRETO")
+    secreto = secreto_telegram()
     if not secreto or not secrets.compare_digest(request.headers.get("x-telegram-bot-api-secret-token", ""), secreto):
         return PlainTextResponse("no", status_code=403)
     aviso = await request.json()
@@ -256,7 +263,7 @@ async def _ciclo(app):
               if not _env(n)]
     print(f"[arranque] direccion publica: {base or '(ninguna)'}; variables vacias: {faltan or 'ninguna'}", flush=True)
     if base.startswith("https://") and _env("TELEGRAM_TOKEN") and _env("WEBHOOK_SECRETO"):
-        r = await telegram("setWebhook", url=f"{base.rstrip('/')}/telegram", secret_token=_env("WEBHOOK_SECRETO"),
+        r = await telegram("setWebhook", url=f"{base.rstrip('/')}/telegram", secret_token=secreto_telegram(),
                            allowed_updates=["message", "callback_query"])
         print(f"[arranque] setWebhook: ok={r.get('ok')} {r.get('description', '')}", flush=True)
         await telegram("setMyCommands", commands=[{"command": "vuelos", "description": "Buscar vuelos baratos"}])

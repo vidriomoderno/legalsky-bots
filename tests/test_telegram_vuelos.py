@@ -92,5 +92,9 @@ def test_webhook_exige_el_secreto(monkeypatch):
     c = TestClient(tg.app)
     assert c.post("/telegram", json={}).status_code == 403
     assert c.post("/telegram", json={}, headers={"X-Telegram-Bot-Api-Secret-Token": "malo"}).status_code == 403
+    assert tg.secreto_telegram().isalnum() and tg.secreto_telegram() != "s3cr3t"
+    monkeypatch.setattr(tg, "_atender_seguro", lambda aviso: None)
+    ok = c.post("/telegram", json={}, headers={"X-Telegram-Bot-Api-Secret-Token": tg.secreto_telegram()})
+    assert ok.status_code == 200
     monkeypatch.setenv("WEBHOOK_SECRETO", "")
     assert c.post("/telegram", json={}, headers={"X-Telegram-Bot-Api-Secret-Token": ""}).status_code == 403
