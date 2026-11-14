@@ -4,11 +4,13 @@ Mismas reglas que el bot del PC (legalsky_bots/vuelos.py): mínimo 2 h 30 min an
 máximo 12 h, terminal por aerolínea y las 5 opciones más baratas.
 
 Gasto en SerpApi (plan gratis: 250 consultas al mes):
-- buscar(): 1 consulta por cada día que toca la ventana (1 o 2), con los 12 destinos a la vez.
+- buscar(): por cada día que toca la ventana (1 o 2), 2 consultas en nacional y 4 en internacional
+  (los destinos van en grupos de 7 aeropuertos).
 - enlace_aerolinea(): 1 consulta, solo cuando el asesor pide el enlace de un vuelo.
 SerpApi no cobra la misma consulta repetida dentro de 1 hora (caché).
 """
 
+import html
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -39,21 +41,25 @@ class ErrorSerpApi(Exception):
     pass
 
 
-def aeropuertos_destino(aeropuerto: str, tipo: str) -> str:
+POR_CONSULTA = 7  # con 12 destinos a la vez Google Flights no devuelve nada; con 7 sí (probado nov-2026)
+
+
+def aeropuertos_destino(aeropuerto: str, tipo: str) -> list[str]:
+    """Los aeropuertos de destino en grupos de POR_CONSULTA, cada grupo es una consulta ("A,B,C")."""
     codigos = []
     for d in DESTINOS[(aeropuerto, tipo)]:
         codigos += AEROPUERTOS_DE_CIUDAD.get(d, [d])
-    return ",".join(codigos)
+    return [",".join(codigos[i:i + POR_CONSULTA]) for i in range(0, len(codigos), POR_CONSULTA)]
 
 
 def dias(b: Busqueda) -> list[str]:
     return sorted({b.desde.date().isoformat(), b.hasta.date().isoformat()})
 
 
-def _parametros(b: Busqueda, dia: str, clave: str) -> dict:
+def _parametros(b: Busqueda, dia: str, destinos: str, clave: str) -> dict:
     return {
         "engine": "google_flights", "departure_id": b.aeropuerto,
-        "arrival_id": aeropuertos_destino(b.aeropuerto, b.tipo), "outbound_date": dia,
+        "arrival_id": destinos, "outbound_date": dia,
         "type": "2", "hl": "es", "gl": "es", "currency": "EUR", "api_key": clave,
     }
 
@@ -105,7 +111,8 @@ def buscar(b: Busqueda, clave: str, cliente: httpx.Client | None = None) -> list
     with cliente or httpx.Client() as c:
         opciones = []
         for dia in dias(b):
-            opciones += opciones_desde_respuesta(_consultar(c, _parametros(b, dia, clave)))
+            for grupo in aeropuertos_destino(b.aeropuerto, b.tipo):
+                opciones += opciones_desde_respuesta(_consultar(c, _parametros(b, dia, grupo, clave)))
     return mejores_opciones(opciones, b)
 
 
@@ -135,7 +142,7 @@ def resolver_enlace(peticion: dict, cliente: httpx.Client) -> str:
     if not destino:
         m = re.search(r"""(?:url=|location\.(?:href|replace)\(?\s*=?\s*)['"]?(https://[^'"\s>]+)""", r.text or "")
         destino = m.group(1) if m else ""
-    return enlace_de_aerolinea(destino)
+    return enlace_de_aerolinea(html.unescape(destino))
 
 
 def enlace_aerolinea(b: Busqueda, opcion: Opcion, clave: str, cliente: httpx.Client | None = None) -> tuple[str, dict | None]:
@@ -143,7 +150,8 @@ def enlace_aerolinea(b: Busqueda, opcion: Opcion, clave: str, cliente: httpx.Cli
     if not opcion.booking_token:
         return "", None
     with cliente or httpx.Client() as c:
-        parametros = {**_parametros(b, opcion.vuelo.salida.date().isoformat(), clave),
+        destino = ",".join(AEROPUERTOS_DE_CIUDAD.get(opcion.vuelo.destino, [opcion.vuelo.destino]))
+        parametros = {**_parametros(b, opcion.vuelo.salida.date().isoformat(), destino, clave),
                       "booking_token": opcion.booking_token}
         juntos = opcion_de_la_aerolinea(_consultar(c, parametros), opcion.vuelo.aerolinea)
         if not juntos:

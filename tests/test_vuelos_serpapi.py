@@ -34,9 +34,12 @@ RESPUESTA = {
 
 
 def test_destinos_de_ciudad_se_piden_por_aeropuerto():
-    destinos = serp.aeropuertos_destino("MAD", "internacional").split(",")
+    grupos = serp.aeropuertos_destino("MAD", "internacional")
+    destinos = ",".join(grupos).split(",")
     assert {"LHR", "LGW", "CDG", "FCO", "MXP"} <= set(destinos)
     assert "LON" not in destinos and "PAR" not in destinos
+    assert all(len(g.split(",")) <= serp.POR_CONSULTA for g in grupos)
+    assert len(serp.aeropuertos_destino("MAD", "nacional")) == 2
 
 
 def test_lee_vuelos_y_aplica_las_reglas_de_terminal_y_horario():
@@ -57,7 +60,7 @@ def test_una_consulta_por_dia_con_todos_los_destinos():
 
     b = Busqueda("MAD", "TODAS", "nacional", datetime(2026, 11, 13, 20, 0, tzinfo=ZONA))  # ventana pasa a mañana
     serp.buscar(b, "clave", httpx.Client(transport=httpx.MockTransport(responder)))
-    assert [p["outbound_date"] for p in pedidas] == ["2026-11-13", "2026-11-14"]
+    assert [p["outbound_date"] for p in pedidas] == ["2026-11-13"] * 2 + ["2026-11-14"] * 2
     assert pedidas[0]["type"] == "2" and pedidas[0]["currency"] == "EUR" and "," in pedidas[0]["arrival_id"]
 
 
@@ -84,5 +87,12 @@ def test_resuelve_la_redireccion_de_google_a_la_aerolinea():
         return httpx.Response(302, headers={"location": "https://booking.iberiaexpress.com/?from=MAD&to=PMI"})
 
     c = httpx.Client(transport=httpx.MockTransport(responder))
+    enlace = serp.resolver_enlace({"url": "https://www.google.com/travel/clk/f", "post_data": "u=1"}, c)
+    assert enlace == "https://booking.iberiaexpress.com/?from=MAD&to=PMI"
+
+
+def test_redireccion_dentro_de_la_pagina_con_amp():
+    pagina = '<meta http-equiv="refresh" content="0;url=https://booking.iberiaexpress.com/?from=MAD&amp;to=PMI">'
+    c = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, text=pagina)))
     enlace = serp.resolver_enlace({"url": "https://www.google.com/travel/clk/f", "post_data": "u=1"}, c)
     assert enlace == "https://booking.iberiaexpress.com/?from=MAD&to=PMI"
