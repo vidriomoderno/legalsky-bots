@@ -169,7 +169,7 @@ def texto_resultado(b: Busqueda, opciones: list[serp.Opcion]) -> str:
     lineas = []
     for n, o in enumerate(opciones, 1):
         v = o.vuelo
-        escalas = "directo" if v.escalas == 0 else f"{v.escalas} escala(s)"
+        escalas = "directo" if v.escalas == 0 else f"escala en {v.escalas_en.replace(',', ', ')}"
         ideal = " ⭐" if en_horario_ideal(v, b) else ""
         lineas.append(f"<b>{n}. {v.precio:.0f} €</b> · {v.salida:%H:%M} → {html.escape(v.destino)} · "
                       f"{html.escape(v.aerolinea)} · {escalas}{ideal}")

@@ -11,7 +11,7 @@
 
 Formato de trabajo/vuelos_leidos.json (lo escribe Claude):
     [{"aerolinea": "Vueling", "destino": "BCN", "salida": "2026-11-05T10:10", "llegada": "11:30",
-      "precio": 136, "escalas": 0, "enlace": "<url de la consulta>"}, ...]
+      "precio": 136, "escalas": 0, "escalas_en": "", "enlace": "<url de la consulta>"}, ...]
 """
 
 import html

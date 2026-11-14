@@ -39,11 +39,14 @@ Escribe `trabajo/vuelos_leidos.json`, una lista con un elemento por vuelo:
 
 ```
 {"aerolinea": "Vueling", "destino": "BCN", "salida": "2026-11-05T10:10", "llegada": "11:30",
- "precio": 136, "escalas": 0, "enlace": "<url de esa consulta>"}
+ "precio": 136, "escalas": 0, "escalas_en": "", "enlace": "<url de esa consulta>"}
 ```
 
 `salida` es la hora local en AAAA-MM-DDTHH:MM, con el `dia` de la consulta. `aerolinea` es la
-primera aerolínea que muestra Google. Incluye todos los vuelos leídos: el script aplica las
+primera aerolínea que muestra Google. Si el vuelo tiene escalas, pon en `escalas_en` los códigos
+de los aeropuertos de escala en orden ("MAD" o "MAD,LIS"); Google los muestra junto a "1 escala".
+Es obligatorio: el script descarta los vuelos con escala sin `escalas_en`, y los que en
+internacional empiezan con un vuelo nacional (por ejemplo Barcelona-Lisboa con escala en Madrid). Incluye todos los vuelos leídos: el script aplica las
 reglas (mínimo 2 h 30 min antes de salir, terminal, los 5 más baratos). Luego ejecuta:
 
 ```

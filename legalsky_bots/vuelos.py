@@ -56,6 +56,26 @@ DESTINOS = {
 }
 
 
+# Aeropuertos de España (IATA). Sirve para saber si el PRIMER vuelo, el que coge el asesor, es nacional
+# o internacional: un Barcelona-Lisboa con escala en Madrid empieza con un vuelo nacional.
+AEROPUERTOS_ESPANA = set("""
+MAD BCN AGP SVQ PMI VLC BIO ALC LPA TFN TFS SCQ IBZ OVD GRX MAH ACE FUE SPC GMZ VDE VGO LCG XRY SDR ZAZ SLM
+VLL LEI MJV RMU REU GRO VIT PNA BJZ LEN EAS ODB HSK RJL ABC CDT MLN JCU TOJ QSA RGS HEV AEI
+""".split())
+
+
+def tipo_de_ruta_valido(tipo: str, escalas_en: str, destino: str) -> bool:
+    """Nacional: todo el viaje dentro de España. Internacional: el primer vuelo ya sale de España.
+
+    escalas_en: aeropuertos de escala separados por comas ("MAD" o "MAD,LIS"); vacío si es directo.
+    """
+    paradas = [p.strip().upper() for p in escalas_en.split(",") if p.strip()]
+    primera_llegada = paradas[0] if paradas else destino.upper()
+    if tipo == "internacional":
+        return primera_llegada not in AEROPUERTOS_ESPANA and destino.upper() not in AEROPUERTOS_ESPANA
+    return all(p in AEROPUERTOS_ESPANA for p in paradas + [destino.upper()])
+
+
 @dataclass(frozen=True)
 class Busqueda:
     aeropuerto: str  # MAD | BCN
@@ -90,6 +110,7 @@ class Vuelo:
     llegada: str = ""
     enlace: str = ""  # la búsqueda de Google Flights
     enlace_aerolinea: str = ""  # la página de la aerolínea con ese vuelo (paso 4 de la skill)
+    escalas_en: str = ""  # aeropuertos de escala en orden, separados por comas ("MAD"); vacío si es directo
 
 
 def ahora_en_espana() -> datetime:
@@ -129,7 +150,9 @@ def mejores(vuelos: list[Vuelo], b: Busqueda) -> list[Vuelo]:
     """Las 5 opciones más baratas que cumplen las reglas, sin repetir el mismo vuelo."""
     validos = {}
     for v in vuelos:
-        if b.desde <= v.salida <= b.hasta and sale_de_terminal(v.aerolinea, b.aeropuerto, b.terminal):
+        escalas_conocidas = v.escalas == 0 or bool(v.escalas_en)  # con escala desconocida no se puede saber
+        if (b.desde <= v.salida <= b.hasta and sale_de_terminal(v.aerolinea, b.aeropuerto, b.terminal)
+                and escalas_conocidas and tipo_de_ruta_valido(b.tipo, v.escalas_en, v.destino)):
             clave = (v.aerolinea.lower(), v.destino, v.salida)
             if clave not in validos or v.precio < validos[clave].precio:
                 validos[clave] = v
@@ -144,7 +167,7 @@ def vuelo_desde_dict(d: dict) -> Vuelo:
         salida=salida.replace(tzinfo=ZONA) if salida.tzinfo is None else salida,
         precio=float(d["precio"]), escalas=int(d.get("escalas") or 0),
         llegada=str(d.get("llegada") or ""), enlace=str(d.get("enlace") or ""),
-        enlace_aerolinea=str(d.get("enlace_aerolinea") or ""),
+        enlace_aerolinea=str(d.get("enlace_aerolinea") or ""), escalas_en=str(d.get("escalas_en") or ""),
     )
 
 

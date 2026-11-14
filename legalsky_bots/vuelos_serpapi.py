@@ -76,12 +76,13 @@ def opciones_desde_respuesta(datos: dict) -> list[Opcion]:
             llegada_aeropuerto = tramos[-1]["arrival_airport"]["id"]
             llegada = tramos[-1]["arrival_airport"].get("time", "")[-5:]
             precio = float(item["price"])
+            escalas_en = ",".join(t["arrival_airport"]["id"] for t in tramos[:-1])
         except (KeyError, TypeError, ValueError):
             continue
         vuelo = Vuelo(
             aerolinea=str(tramos[0].get("airline") or ""),
             destino=CIUDAD_DE_AEROPUERTO.get(llegada_aeropuerto, llegada_aeropuerto),
-            salida=hora, precio=precio, escalas=len(tramos) - 1, llegada=llegada,
+            salida=hora, precio=precio, escalas=len(tramos) - 1, llegada=llegada, escalas_en=escalas_en,
         )
         salida.append(Opcion(vuelo, str(item.get("booking_token") or "")))
     return salida

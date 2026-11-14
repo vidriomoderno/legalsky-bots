@@ -40,11 +40,12 @@ def test_a_igual_precio_gana_el_horario_ideal():
 
 
 def test_maximo_5_opciones_y_sin_repetidos():
-    lista = [vuelo(3 + i, 30 + i, destino=f"D{i}") for i in range(8)] + [vuelo(3, 25, destino="D0")]
+    destinos = ["BCN", "AGP", "SVQ", "PMI", "VLC", "BIO", "ALC", "LPA"]
+    lista = [vuelo(3 + i, 30 + i, destino=d) for i, d in enumerate(destinos)] + [vuelo(3, 25, destino="BCN")]
     resultado = mejores(lista, busqueda())
     assert len(resultado) == 5
     assert resultado[0].precio == 25
-    assert [v.destino for v in resultado].count("D0") == 1
+    assert [v.destino for v in resultado].count("BCN") == 1
 
 
 @pytest.mark.parametrize("aerolinea,aeropuerto,terminal,esperado", [
@@ -103,3 +104,46 @@ def test_solo_enlaces_web_fuera_de_google(url, esperado):
 
 def test_dominio_sin_www():
     assert dominio("https://www.aireuropa.com/es/vuelos") == "aireuropa.com"
+
+
+# ---------------------------------------------------------------- nacional / internacional por el primer vuelo
+from legalsky_bots.vuelos import AEROLINEAS_POR_TERMINAL, TERMINALES, tipo_de_ruta_valido  # noqa: E402
+
+
+@pytest.mark.parametrize("tipo, escalas_en, destino, esperado", [
+    ("internacional", "", "LIS", True),
+    ("internacional", "MAD", "LIS", False),       # Barcelona-Lisboa por Madrid: el primer vuelo es nacional
+    ("internacional", "LIS", "CMN", True),
+    ("internacional", "", "MAD", False),
+    ("nacional", "", "PMI", True),
+    ("nacional", "MAD", "LPA", True),
+    ("nacional", "LIS", "PMI", False),            # sale de España para volver: no es nacional
+    ("nacional", "", "LIS", False),
+    ("internacional", "LIS", "PMI", False),       # acaba en España: confunde, no se muestra
+])
+def test_tipo_por_el_primer_vuelo(tipo, escalas_en, destino, esperado):
+    assert tipo_de_ruta_valido(tipo, escalas_en, destino) is esperado
+
+
+COMBINACIONES = [(a, t, tipo) for a in TERMINALES for t in TERMINALES[a] + ["TODAS"]
+                 for tipo in ("nacional", "internacional")]
+
+
+@pytest.mark.parametrize("aeropuerto, terminal, tipo", COMBINACIONES)
+def test_ninguna_opcion_mezcla_nacional_e_internacional(aeropuerto, terminal, tipo):
+    b = Busqueda(aeropuerto, terminal, tipo, AHORA)
+    otro = "MAD" if aeropuerto == "BCN" else "BCN"
+    terminal_real = terminal if terminal != "TODAS" else TERMINALES[aeropuerto][0]
+    aerolinea = AEROLINEAS_POR_TERMINAL[(aeropuerto, terminal_real)].split("|")[0].strip()
+    salida = AHORA + timedelta(hours=5)
+    vuelos = [
+        Vuelo(aerolinea, "PMI", salida, 10),                               # nacional directo
+        Vuelo(aerolinea, "LIS", salida, 11),                               # internacional directo
+        Vuelo(aerolinea, "LIS", salida, 12, escalas=1, escalas_en=otro),   # internacional con escala en España
+        Vuelo(aerolinea, "PMI", salida, 13, escalas=1, escalas_en="LIS"),  # vuelve a España por fuera: nunca
+        Vuelo(aerolinea, "CMN", salida, 14, escalas=1, escalas_en="LIS"),  # internacional con escala fuera
+        Vuelo(aerolinea, "LPA", salida, 15, escalas=1, escalas_en=otro),   # nacional con escala en España
+        Vuelo(aerolinea, "DUB", salida, 1, escalas=1),                     # escala desconocida: nunca
+    ]
+    destinos = sorted(v.destino for v in mejores(vuelos, b))
+    assert destinos == (["LPA", "PMI"] if tipo == "nacional" else ["CMN", "LIS"])

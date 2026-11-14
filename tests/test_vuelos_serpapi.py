@@ -43,12 +43,23 @@ def test_destinos_de_ciudad_se_piden_por_aeropuerto():
 
 
 def test_lee_vuelos_y_aplica_las_reglas_de_terminal_y_horario():
-    b = Busqueda("MAD", "T4", "nacional", AHORA)
-    elegidas = serp.mejores_opciones(serp.opciones_desde_respuesta(RESPUESTA), b)
-    assert [(o.vuelo.aerolinea, o.vuelo.destino, o.vuelo.precio) for o in elegidas] == [
-        ("Iberia Express", "PMI", 26), ("British Airways", "LON", 40), ("Iberia", "DUB", 90)]
-    assert elegidas[0].booking_token == "A" and elegidas[2].vuelo.escalas == 1
-    assert elegidas[0].vuelo.salida == datetime(2026, 11, 13, 19, 0, tzinfo=ZONA)
+    opciones = serp.opciones_desde_respuesta(RESPUESTA)
+    nacional = serp.mejores_opciones(opciones, Busqueda("MAD", "T4", "nacional", AHORA))
+    assert [(o.vuelo.aerolinea, o.vuelo.destino, o.vuelo.precio) for o in nacional] == [("Iberia Express", "PMI", 26)]
+    assert nacional[0].booking_token == "A"
+    assert nacional[0].vuelo.salida == datetime(2026, 11, 13, 19, 0, tzinfo=ZONA)
+
+    internacional = serp.mejores_opciones(opciones, Busqueda("MAD", "T4", "internacional", AHORA))
+    assert [(o.vuelo.aerolinea, o.vuelo.destino, o.vuelo.precio) for o in internacional] == [
+        ("British Airways", "LON", 40), ("Iberia", "DUB", 90)]
+    assert internacional[1].vuelo.escalas_en == "LHR"
+
+
+def test_internacional_con_escala_en_espana_no_sale():
+    datos = {"best_flights": [{"flights": [_tramo("2026-11-13 19:00", "BCN", "MAD", "Air Europa"),
+                                           _tramo("x", "MAD", "LIS", "Air Europa")], "price": 133, "booking_token": "T"}]}
+    b = Busqueda("BCN", "T1", "internacional", AHORA)
+    assert serp.mejores_opciones(serp.opciones_desde_respuesta(datos), b) == []
 
 
 def test_una_consulta_por_dia_con_todos_los_destinos():
