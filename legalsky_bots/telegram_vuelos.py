@@ -14,6 +14,7 @@ import hashlib
 import html
 import logging
 import os
+import re
 import secrets
 import time
 from contextlib import asynccontextmanager
@@ -49,8 +50,68 @@ def secreto_telegram() -> str:
     return hashlib.sha256(secreto.encode()).hexdigest() if secreto else ""
 
 
-def usuarios_permitidos() -> set[int]:
+def usuarios_de_render() -> set[int]:
     return {int(x) for x in _env("USUARIOS_PERMITIDOS").replace(" ", "").split(",") if x.isdigit()}
+
+
+def usuarios_permitidos() -> set[int]:
+    """Los de Render (fijos) más los aceptados con el botón de Telegram."""
+    return usuarios_de_render() | set(_aprobados)
+
+
+# ------------------------------------------------------------ Lista de acceso
+# Los aceptados con el botón se guardan en un mensaje fijado del chat del administrador con el bot:
+# así no se pierden cuando Render reinicia el servicio (el plan gratis no tiene disco).
+CABECERA_LISTA = "📋 Usuarios con acceso al bot (no borres ni desfijes este mensaje):"
+_aprobados: dict[int, str] = {}
+_lista = {"cargada": False, "chat": None, "mensaje": None}
+
+
+def leer_lista(texto: str) -> dict[int, str]:
+    usuarios = {}
+    for linea in texto.splitlines():
+        m = re.match(r"^• (.*) — id (\d+)$", linea.strip())
+        if m:
+            usuarios[int(m.group(2))] = m.group(1)
+    return usuarios
+
+
+def texto_lista() -> str:
+    filas = [f"• {nombre} — id {uid}" for uid, nombre in sorted(_aprobados.items(), key=lambda x: x[1].lower())]
+    return CABECERA_LISTA + "\n" + ("\n".join(filas) if filas else "(nadie todavía)")
+
+
+async def cargar_lista():
+    if _lista["cargada"]:
+        return
+    for admin in administradores():
+        r = await telegram("getChat", chat_id=admin)
+        fijado = (r.get("result") or {}).get("pinned_message") or {}
+        if fijado.get("text", "").startswith(CABECERA_LISTA):
+            _aprobados.update(leer_lista(fijado["text"]))
+            _lista.update(chat=admin, mensaje=fijado["message_id"])
+            break
+    _lista["cargada"] = True
+
+
+async def guardar_lista():
+    if _lista["mensaje"]:
+        r = await telegram("editMessageText", chat_id=_lista["chat"], message_id=_lista["mensaje"], text=texto_lista())
+        if r.get("ok") or "not modified" in str(r.get("description", "")):
+            return
+    admins = administradores()
+    if not admins:
+        return
+    r = await telegram("sendMessage", chat_id=admins[0], text=texto_lista(), disable_notification=True)
+    mensaje = (r.get("result") or {}).get("message_id")
+    if mensaje:
+        _lista.update(chat=admins[0], mensaje=mensaje)
+        await telegram("pinChatMessage", chat_id=admins[0], message_id=mensaje, disable_notification=True)
+
+
+def _nombre(persona: dict) -> str:
+    nombre = " ".join(x for x in (persona.get("first_name"), persona.get("last_name")) if x) or "Sin nombre"
+    return nombre + (f" (@{persona['username']})" if persona.get("username") else "")
 
 
 def _limpiar():
@@ -182,18 +243,43 @@ async def avisar_solicitud(persona: dict):
     if persona["id"] in _solicitudes_avisadas:
         return
     _solicitudes_avisadas.add(persona["id"])
-    nombre = " ".join(x for x in (persona.get("first_name"), persona.get("last_name")) if x) or "Sin nombre"
-    alias = f" (@{persona['username']})" if persona.get("username") else ""
     for admin in administradores():
         await telegram("sendMessage", chat_id=admin,
-                       text=f"🔔 Solicitud de acceso al bot de vuelos:\n{html.escape(nombre)}{html.escape(alias)}\n"
-                            f"Número de usuario: <code>{persona['id']}</code>\n\n"
-                            "Para darle acceso, añade ese número en USUARIOS_PERMITIDOS (Render).",
-                       parse_mode="HTML")
+                       text=f"🔔 Solicitud de acceso al bot de vuelos:\n{_nombre(persona)}\nNúmero de usuario: {persona['id']}",
+                       reply_markup=botones([[("✅ Dar acceso", f"ok|{persona['id']}"),
+                                              ("❌ Rechazar", f"no|{persona['id']}")]]))
+
+
+async def responder_solicitud(q: dict, aceptar: bool, uid: int):
+    """El administrador pulsa Dar acceso o Rechazar en el aviso."""
+    chat, mensaje = q["message"]["chat"]["id"], q["message"]["message_id"]
+    lineas = (q["message"].get("text") or "").splitlines()
+    nombre = lineas[1] if len(lineas) > 1 else f"Usuario {uid}"
+    if aceptar:
+        _aprobados[uid] = nombre
+        await guardar_lista()
+        await telegram("answerCallbackQuery", callback_query_id=q["id"], text="Acceso dado")
+        await telegram("editMessageText", chat_id=chat, message_id=mensaje, text=f"✅ Acceso dado a {nombre}.")
+        await telegram("sendMessage", chat_id=uid, text="✅ Ya tienes acceso. ¿Desde qué aeropuerto buscamos vuelos?",
+                       reply_markup=teclado_aeropuertos())
+    else:
+        await telegram("answerCallbackQuery", callback_query_id=q["id"], text="Rechazado")
+        await telegram("editMessageText", chat_id=chat, message_id=mensaje, text=f"❌ Rechazada la solicitud de {nombre}.")
+
+
+async def mostrar_usuarios(chat: int):
+    """/usuarios (solo administrador): lista con botón para quitar a cada uno."""
+    fijos = sorted(usuarios_de_render())
+    texto = (f"👥 Usuarios con acceso:\n" + "\n".join(f"• {n}" for n in _aprobados.values())
+             + (f"\n• {len(fijos)} fijo(s) en Render (ids: {', '.join(map(str, fijos))})" if fijos else ""))
+    filas = [[(f"Quitar a {n[:40]}", f"qt|{uid}")] for uid, n in _aprobados.items()]
+    extra = {"reply_markup": botones(filas)} if filas else {}
+    await telegram("sendMessage", chat_id=chat, text=texto, **extra)
 
 
 async def atender(aviso: dict):
     """Un aviso de Telegram: un mensaje escrito o un botón pulsado."""
+    await cargar_lista()
     if "callback_query" in aviso:
         q = aviso["callback_query"]
         usuario, dato = q["from"]["id"], q.get("data", "")
@@ -202,7 +288,19 @@ async def atender(aviso: dict):
             await telegram("answerCallbackQuery", callback_query_id=q["id"], text="No tienes acceso.")
             return
         partes = dato.split("|")
-        if partes[0] == "inicio":
+        es_admin = usuario in administradores()
+        if partes[0] in ("ok", "no", "qt") and len(partes) == 2 and partes[1].isdigit():
+            if not es_admin:
+                await telegram("answerCallbackQuery", callback_query_id=q["id"], text="Solo el administrador.")
+            elif partes[0] == "qt":
+                nombre = _aprobados.pop(int(partes[1]), None)
+                await guardar_lista()
+                await telegram("answerCallbackQuery", callback_query_id=q["id"], text="Quitado")
+                await telegram("editMessageText", chat_id=chat, message_id=mensaje,
+                               text=f"🚫 Quitado el acceso a {nombre or partes[1]}.")
+            else:
+                await responder_solicitud(q, partes[0] == "ok", int(partes[1]))
+        elif partes[0] == "inicio":
             await telegram("answerCallbackQuery", callback_query_id=q["id"])
             await telegram("sendMessage", chat_id=chat, text="¿Desde qué aeropuerto?", reply_markup=teclado_aeropuertos())
         elif partes[0] == "a" and len(partes) == 2 and partes[1] in AEROPUERTOS:
@@ -235,6 +333,19 @@ async def atender(aviso: dict):
                        text=f"Este bot es solo para el equipo de LegalSky. Ya hemos avisado para que te den acceso; "
                             f"te escribiremos cuando esté listo.\n(Tu número de usuario: {usuario})")
         await avisar_solicitud(m["from"])
+        return
+    texto = (m.get("text") or "").strip()
+    if texto.startswith("/usuarios") and usuario in administradores():
+        await mostrar_usuarios(chat)
+        return
+    dar = re.match(r"^/dar\s+(\d+)\s*(.*)$", texto)
+    if dar and usuario in administradores():
+        uid = int(dar.group(1))
+        _aprobados[uid] = dar.group(2).strip() or f"Usuario {uid}"
+        await guardar_lista()
+        await telegram("sendMessage", chat_id=chat, text=f"✅ Acceso dado a {_aprobados[uid]}.")
+        await telegram("sendMessage", chat_id=uid, text="✅ Ya tienes acceso. ¿Desde qué aeropuerto buscamos vuelos?",
+                       reply_markup=teclado_aeropuertos())
         return
     await telegram("sendMessage", chat_id=chat, text="Hola 👋 ¿Desde qué aeropuerto buscamos vuelos?",
                    reply_markup=teclado_aeropuertos())

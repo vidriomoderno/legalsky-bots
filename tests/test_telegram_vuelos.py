@@ -15,11 +15,16 @@ from legalsky_bots.vuelos import ZONA, Vuelo
 
 @pytest.fixture
 def enviados(monkeypatch):
-    lista = []
+    lista = type('Lista', (list,), {})()
 
     async def falso(metodo, **datos):
         lista.append((metodo, datos))
-        return {"ok": True}
+        if metodo == "getChat":
+            return {"ok": True, "result": fijado.get("mensaje") and {"pinned_message": fijado["mensaje"]} or {}}
+        return {"ok": True, "result": {"message_id": 77}}
+
+    fijado = {}
+    lista.fijado = fijado
 
     monkeypatch.setattr(tg, "telegram", falso)
     monkeypatch.setenv("USUARIOS_PERMITIDOS", "111, 222")
@@ -27,6 +32,9 @@ def enviados(monkeypatch):
     monkeypatch.setenv("RENDER_EXTERNAL_URL", "https://bot.onrender.com")
     tg._busquedas.clear()
     tg._redirecciones.clear()
+    tg._aprobados.clear()
+    tg._solicitudes_avisadas.clear()
+    tg._lista.update(cargada=False, chat=None, mensaje=None)
     return lista
 
 
@@ -43,11 +51,12 @@ def test_desconocido_recibe_su_numero_y_no_puede_buscar(enviados):
     tg._solicitudes_avisadas.clear()
     persona = {"id": 999, "first_name": "Ana", "username": "ana_ls"}
     _correr({"message": {"from": persona, "chat": {"id": 5}, "text": "/vuelos"}})
-    assert "999" in enviados[0][1]["text"]
-    aviso = enviados[1][1]
+    mensajes = [d for m, d in enviados if m == "sendMessage"]
+    assert "999" in mensajes[0]["text"]
+    aviso = mensajes[1]
     assert aviso["chat_id"] == 111 and "Ana (@ana_ls)" in aviso["text"] and "999" in aviso["text"]
     _correr({"message": {"from": persona, "chat": {"id": 5}, "text": "hola"}})
-    assert sum(1 for m, d in enviados if d.get("chat_id") == 111) == 1  # solo se avisa una vez
+    assert sum(1 for m, d in enviados if m == "sendMessage" and d.get("chat_id") == 111) == 1  # solo se avisa una vez
     _correr(_boton(999, "x|MAD|T4|nacional"))
     assert enviados[-1] == ("answerCallbackQuery", {"callback_query_id": "q", "text": "No tienes acceso."})
 
@@ -104,3 +113,41 @@ def test_webhook_exige_el_secreto(monkeypatch):
     assert ok.status_code == 200
     monkeypatch.setenv("WEBHOOK_SECRETO", "")
     assert c.post("/telegram", json={}, headers={"X-Telegram-Bot-Api-Secret-Token": ""}).status_code == 403
+
+
+def test_dar_acceso_con_el_boton_y_guardarlo_fijado(enviados):
+    _correr({"message": {"from": {"id": 555, "first_name": "Fede"}, "chat": {"id": 555}, "text": "hola"}})
+    aviso = next(d for m, d in enviados if m == "sendMessage" and d.get("chat_id") == 111)
+    assert [b["callback_data"] for b in aviso["reply_markup"]["inline_keyboard"][0]] == ["ok|555", "no|555"]
+
+    _correr(_boton(222, "ok|555"))  # 222 tiene acceso pero no es administrador
+    assert enviados[-1][1]["text"] == "Solo el administrador."
+    assert 555 not in tg.usuarios_permitidos()
+
+    boton = _boton(111, "ok|555")
+    boton["callback_query"]["message"]["text"] = aviso["text"]
+    _correr(boton)
+    assert 555 in tg.usuarios_permitidos()
+    metodos = [m for m, d in enviados]
+    assert "pinChatMessage" in metodos
+    lista = next(d["text"] for m, d in enviados if d.get("text", "").startswith(tg.CABECERA_LISTA))
+    assert "• Fede — id 555" in lista
+    assert any(d.get("chat_id") == 555 and "Ya tienes acceso" in d["text"] for m, d in enviados)
+
+
+def test_al_reiniciar_lee_la_lista_fijada(enviados):
+    enviados.fijado["mensaje"] = {"message_id": 9, "text": tg.CABECERA_LISTA + "\n• Fede (@fede) — id 555"}
+    _correr({"message": {"from": {"id": 555}, "chat": {"id": 555}, "text": "/vuelos"}})
+    assert enviados[-1][1]["text"].startswith("Hola")
+    assert tg._lista["mensaje"] == 9
+
+    _correr(_boton(111, "qt|555"))
+    assert 555 not in tg.usuarios_permitidos()
+    assert any(m == "editMessageText" and d.get("message_id") == 9 and "nadie" in d["text"] for m, d in enviados)
+
+
+def test_comando_dar_solo_para_el_administrador(enviados):
+    _correr({"message": {"from": {"id": 222}, "chat": {"id": 222}, "text": "/dar 777 Intruso"}})
+    assert 777 not in tg.usuarios_permitidos()
+    _correr({"message": {"from": {"id": 111}, "chat": {"id": 111}, "text": "/dar 777 Fede Lopez"}})
+    assert tg._aprobados[777] == "Fede Lopez"
