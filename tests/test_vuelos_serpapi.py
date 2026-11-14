@@ -51,8 +51,7 @@ def test_lee_vuelos_y_aplica_las_reglas_de_terminal_y_horario():
 
     internacional = serp.mejores_opciones(opciones, Busqueda("MAD", "T4", "internacional", AHORA))
     assert [(o.vuelo.aerolinea, o.vuelo.destino, o.vuelo.precio) for o in internacional] == [
-        ("British Airways", "LON", 40), ("Iberia", "DUB", 90)]
-    assert internacional[1].vuelo.escalas_en == "LHR"
+        ("British Airways", "LON", 40)]  # el Iberia a Dublín hace escala en Londres: no sirve
 
 
 def test_internacional_con_escala_en_espana_no_sale():
@@ -72,6 +71,7 @@ def test_una_consulta_por_dia_con_todos_los_destinos():
     b = Busqueda("MAD", "TODAS", "nacional", datetime(2026, 11, 13, 20, 0, tzinfo=ZONA))  # ventana pasa a mañana
     serp.buscar(b, "clave", httpx.Client(transport=httpx.MockTransport(responder)))
     assert [p["outbound_date"] for p in pedidas] == ["2026-11-13"] * 2 + ["2026-11-14"] * 2
+    assert pedidas[0]["stops"] == "1"
     assert pedidas[0]["type"] == "2" and pedidas[0]["currency"] == "EUR" and "," in pedidas[0]["arrival_id"]
 
 

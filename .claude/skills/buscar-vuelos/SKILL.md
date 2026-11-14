@@ -43,10 +43,9 @@ Escribe `trabajo/vuelos_leidos.json`, una lista con un elemento por vuelo:
 ```
 
 `salida` es la hora local en AAAA-MM-DDTHH:MM, con el `dia` de la consulta. `aerolinea` es la
-primera aerolínea que muestra Google. Si el vuelo tiene escalas, pon en `escalas_en` los códigos
-de los aeropuertos de escala en orden ("MAD" o "MAD,LIS"); Google los muestra junto a "1 escala".
-Es obligatorio: el script descarta los vuelos con escala sin `escalas_en`, y los que en
-internacional empiezan con un vuelo nacional (por ejemplo Barcelona-Lisboa con escala en Madrid). Incluye todos los vuelos leídos: el script aplica las
+primera aerolínea que muestra Google. **Solo sirven vuelos directos**: en Google Flights usa el
+filtro "Escalas: sin escalas" (o añade "directo" a la búsqueda) y no anotes vuelos con escala; si
+alguno se cuela, el script lo descarta. Incluye todos los vuelos leídos: el script aplica las
 reglas (mínimo 2 h 30 min antes de salir, terminal, los 5 más baratos). Luego ejecuta:
 
 ```

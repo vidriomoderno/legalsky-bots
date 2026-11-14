@@ -146,7 +146,8 @@ def test_ninguna_opcion_mezcla_nacional_e_internacional(aeropuerto, terminal, ti
         Vuelo(aerolinea, "DUB", salida, 1, escalas=1),                     # escala desconocida: nunca
     ]
     destinos = sorted(v.destino for v in mejores(vuelos, b))
-    assert destinos == (["LPA", "PMI"] if tipo == "nacional" else ["CMN", "LIS"])
+    # Solo directos y del tipo elegido: nada con escala, aunque la escala sea del tipo correcto.
+    assert destinos == (["PMI"] if tipo == "nacional" else ["LIS"])
 
 
 def test_todos_los_destinos_tienen_nombre_y_bandera_correcta():

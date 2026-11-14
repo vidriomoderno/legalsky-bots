@@ -4,6 +4,7 @@ Claude lee los precios en Google Flights con el Chrome de Fede; aquí están las
 - Nunca un vuelo que salga en menos de 2 h 30 min.
 - Lo principal es el precio; a igual precio, mejor si sale dentro de 8 a 12 horas.
 - 5 opciones por búsqueda.
+- Solo vuelos directos: con escala el asesor no puede pasar a la zona internacional.
 
 Las terminales salen de la lista oficial de Aena (aerolíneas por terminal, nov-2026). Son por
 aerolínea, no por vuelo: una aerolínea puede cambiar de terminal, así que hay que confirmarla
@@ -176,9 +177,9 @@ def mejores(vuelos: list[Vuelo], b: Busqueda) -> list[Vuelo]:
     """Las 5 opciones más baratas que cumplen las reglas, sin repetir el mismo vuelo."""
     validos = {}
     for v in vuelos:
-        escalas_conocidas = v.escalas == 0 or bool(v.escalas_en)  # con escala desconocida no se puede saber
+        # Solo directos: con escala el asesor no puede pasar a la zona internacional (regla de LegalSky).
         if (b.desde <= v.salida <= b.hasta and sale_de_terminal(v.aerolinea, b.aeropuerto, b.terminal)
-                and escalas_conocidas and tipo_de_ruta_valido(b.tipo, v.escalas_en, v.destino)):
+                and v.escalas == 0 and not v.escalas_en and tipo_de_ruta_valido(b.tipo, "", v.destino)):
             clave = (v.aerolinea.lower(), v.destino, v.salida)
             if clave not in validos or v.precio < validos[clave].precio:
                 validos[clave] = v
