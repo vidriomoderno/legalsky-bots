@@ -82,6 +82,13 @@ NOMBRES = {
     "AMS": ("Ámsterdam", "🇳🇱"), "FRA": ("Fráncfort", "🇩🇪"), "MUC": ("Múnich", "🇩🇪"), "BER": ("Berlín", "🇩🇪"),
     "DUB": ("Dublín", "🇮🇪"), "CMN": ("Casablanca", "🇲🇦"), "GVA": ("Ginebra", "🇨🇭"), "ZRH": ("Zúrich", "🇨🇭"),
     "VIE": ("Viena", "🇦🇹"), "IST": ("Estambul", "🇹🇷"), "CPH": ("Copenhague", "🇩🇰"),
+    "MLN": ("Melilla", "🇪🇸"), "EAS": ("San Sebastián", "🇪🇸"), "SPC": ("La Palma", "🇪🇸"), "LEI": ("Almería", "🇪🇸"),
+    "FAO": ("Faro", "🇵🇹"), "MAN": ("Mánchester", "🇬🇧"), "EDI": ("Edimburgo", "🇬🇧"), "NCE": ("Niza", "🇫🇷"),
+    "LYS": ("Lyon", "🇫🇷"), "MRS": ("Marsella", "🇫🇷"), "TLS": ("Toulouse", "🇫🇷"), "BOD": ("Burdeos", "🇫🇷"),
+    "FLR": ("Florencia", "🇮🇹"), "VCE": ("Venecia", "🇮🇹"), "NAP": ("Nápoles", "🇮🇹"), "BLQ": ("Bolonia", "🇮🇹"),
+    "PMO": ("Palermo", "🇮🇹"), "DUS": ("Düsseldorf", "🇩🇪"), "BSL": ("Basilea", "🇨🇭"), "PRG": ("Praga", "🇨🇿"),
+    "BUD": ("Budapest", "🇭🇺"), "WAW": ("Varsovia", "🇵🇱"), "ATH": ("Atenas", "🇬🇷"), "OTP": ("Bucarest", "🇷🇴"),
+    "RAK": ("Marrakech", "🇲🇦"), "TNG": ("Tánger", "🇲🇦"),
 }
 
 

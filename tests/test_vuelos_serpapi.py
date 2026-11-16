@@ -39,7 +39,22 @@ def test_destinos_de_ciudad_se_piden_por_aeropuerto():
     assert {"LHR", "LGW", "CDG", "FCO", "MXP"} <= set(destinos)
     assert "LON" not in destinos and "PAR" not in destinos
     assert all(len(g.split(",")) <= serp.POR_CONSULTA for g in grupos)
-    assert len(serp.aeropuertos_destino("MAD", "nacional")) == 2
+    assert len(serp.aeropuertos_destino("MAD", "nacional")) == 4
+    assert "FLR" in destinos and "MAD" not in ",".join(serp.aeropuertos_destino("MAD", "nacional")).split(",")
+
+
+def test_todos_los_aeropuertos_de_telegram_tienen_nombre_y_tipo_correcto():
+    from legalsky_bots.vuelos import AEROPUERTOS_ESPANA, NOMBRES
+    for tipo, codigos in serp.AEROPUERTOS_TELEGRAM.items():
+        assert len(codigos) == len(set(codigos)), tipo
+        for c in codigos:
+            assert c in NOMBRES, c
+            assert (c in AEROPUERTOS_ESPANA) == (tipo == "nacional"), c
+
+
+def test_franja_de_horas_por_dia():
+    b = Busqueda("MAD", "T4", "internacional", datetime(2026, 11, 16, 17, 11, tzinfo=ZONA))  # 19:41 a 05:11
+    assert [serp.franja(b, d) for d in serp.dias(b)] == ["19,23", "0,5"]
 
 
 def test_lee_vuelos_y_aplica_las_reglas_de_terminal_y_horario():
@@ -70,7 +85,8 @@ def test_una_consulta_por_dia_con_todos_los_destinos():
 
     b = Busqueda("MAD", "TODAS", "nacional", datetime(2026, 11, 13, 20, 0, tzinfo=ZONA))  # ventana pasa a mañana
     serp.buscar(b, "clave", httpx.Client(transport=httpx.MockTransport(responder)))
-    assert [p["outbound_date"] for p in pedidas] == ["2026-11-13"] * 2 + ["2026-11-14"] * 2
+    assert [p["outbound_date"] for p in pedidas] == ["2026-11-13"] * 4 + ["2026-11-14"] * 4
+    assert pedidas[0]["outbound_times"] == "22,23" and pedidas[-1]["outbound_times"] == "0,8"
     assert pedidas[0]["stops"] == "0"  # nacional: con escala también sirve
     assert pedidas[0]["type"] == "2" and pedidas[0]["currency"] == "EUR" and "," in pedidas[0]["arrival_id"]
 

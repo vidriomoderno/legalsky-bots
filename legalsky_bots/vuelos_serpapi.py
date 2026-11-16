@@ -4,8 +4,8 @@ Mismas reglas que el bot del PC (legalsky_bots/vuelos.py): mínimo 2 h 30 min an
 máximo 12 h, terminal por aerolínea y las 5 opciones más baratas.
 
 Gasto en SerpApi (plan gratis: 250 consultas al mes):
-- buscar(): por cada día que toca la ventana (1 o 2), 2 consultas en nacional y 4 en internacional
-  (los destinos van en grupos de 7 aeropuertos).
+- buscar(): por cada día que toca la ventana (1 o 2), 4 consultas en nacional y 7 en internacional
+  (todos los aeropuertos de AEROPUERTOS_TELEGRAM, en grupos de 7).
 - enlace_aerolinea(): 1 consulta, solo cuando el asesor pide el enlace de un vuelo.
 SerpApi no cobra la misma consulta repetida dentro de 1 hora (caché).
 """
@@ -17,7 +17,7 @@ from datetime import datetime
 
 import httpx
 
-from legalsky_bots.vuelos import DESTINOS, ZONA, Busqueda, Vuelo, enlace_de_aerolinea, mejores
+from legalsky_bots.vuelos import ZONA, Busqueda, Vuelo, enlace_de_aerolinea, mejores
 
 API = "https://serpapi.com/search.json"
 
@@ -41,19 +41,34 @@ class ErrorSerpApi(Exception):
     pass
 
 
+# Todos los aeropuertos con vuelo directo frecuente desde Madrid o Barcelona (no solo las ciudades
+# grandes: en nov-2026 se escapó un Madrid-Florencia de 64 € porque Florencia no estaba en la lista).
+AEROPUERTOS_TELEGRAM = {
+    "nacional": """MAD BCN AGP SVQ PMI VLC BIO ALC LPA TFN TFS ACE FUE SCQ VGO LCG OVD SDR IBZ MAH GRX XRY
+        MLN EAS SPC LEI""".split(),
+    "internacional": """LIS OPO FAO LHR LGW STN LTN MAN EDI DUB CDG ORY BVA NCE LYS MRS TLS BOD FCO CIA MXP LIN
+        BGY FLR VCE NAP BLQ PMO BRU CRL AMS FRA MUC BER DUS ZRH GVA BSL VIE CPH PRG BUD WAW ATH IST OTP
+        CMN RAK TNG""".split(),
+}
+
 POR_CONSULTA = 7  # con 12 destinos a la vez Google Flights no devuelve nada; con 7 sí (probado nov-2026)
 
 
 def aeropuertos_destino(aeropuerto: str, tipo: str) -> list[str]:
     """Los aeropuertos de destino en grupos de POR_CONSULTA, cada grupo es una consulta ("A,B,C")."""
-    codigos = []
-    for d in DESTINOS[(aeropuerto, tipo)]:
-        codigos += AEROPUERTOS_DE_CIUDAD.get(d, [d])
+    codigos = [a for a in AEROPUERTOS_TELEGRAM[tipo] if a != aeropuerto]
     return [",".join(codigos[i:i + POR_CONSULTA]) for i in range(0, len(codigos), POR_CONSULTA)]
 
 
 def dias(b: Busqueda) -> list[str]:
     return sorted({b.desde.date().isoformat(), b.hasta.date().isoformat()})
+
+
+def franja(b: Busqueda, dia: str) -> str:
+    """Horas de salida que interesan ese día ("19,23"), para que Google no recorte los vuelos útiles."""
+    inicio = b.desde.hour if b.desde.date().isoformat() == dia else 0
+    fin = b.hasta.hour if b.hasta.date().isoformat() == dia else 23
+    return f"{inicio},{fin}"
 
 
 def _parametros(b: Busqueda, dia: str, destinos: str, clave: str) -> dict:
@@ -115,7 +130,8 @@ def buscar(b: Busqueda, clave: str, cliente: httpx.Client | None = None) -> list
         opciones = []
         for dia in dias(b):
             for grupo in aeropuertos_destino(b.aeropuerto, b.tipo):
-                opciones += opciones_desde_respuesta(_consultar(c, _parametros(b, dia, grupo, clave)))
+                parametros = {**_parametros(b, dia, grupo, clave), "outbound_times": franja(b, dia)}
+                opciones += opciones_desde_respuesta(_consultar(c, parametros))
     return mejores_opciones(opciones, b)
 
 
