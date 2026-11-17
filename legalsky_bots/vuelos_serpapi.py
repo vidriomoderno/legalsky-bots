@@ -4,7 +4,7 @@ Mismas reglas que el bot del PC (legalsky_bots/vuelos.py): mínimo 2 h 30 min an
 máximo 12 h, terminal por aerolínea y las 5 opciones más baratas.
 
 Gasto en SerpApi (plan gratis: 250 consultas al mes):
-- buscar(): por cada día que toca la ventana (1 o 2), 4 consultas en nacional y 7 en internacional
+- buscar(): por cada día que toca la ventana (1 o 2), 4 consultas en nacional y 9 en internacional
   (todos los aeropuertos de AEROPUERTOS_TELEGRAM, en grupos de 7).
 - enlace_aerolinea(): 1 consulta, solo cuando el asesor pide el enlace de un vuelo.
 SerpApi no cobra la misma consulta repetida dentro de 1 hora (caché).
@@ -53,12 +53,13 @@ class SinConsultas(ErrorSerpApi):
 
 # Todos los aeropuertos con vuelo directo frecuente desde Madrid o Barcelona (no solo las ciudades
 # grandes: en nov-2026 se escapó un Madrid-Florencia de 64 € porque Florencia no estaba en la lista).
+# Incluye todos los destinos de los billetes comprados (hoja de control, oct-2026) y rutas low cost.
 AEROPUERTOS_TELEGRAM = {
     "nacional": """MAD BCN AGP SVQ PMI VLC BIO ALC LPA TFN TFS ACE FUE SCQ VGO LCG OVD SDR IBZ MAH GRX XRY
-        MLN EAS SPC LEI""".split(),
+        MLN EAS SPC LEI BJZ RMU ZAZ""".split(),
     "internacional": """LIS OPO FAO LHR LGW STN LTN MAN EDI DUB CDG ORY BVA NCE LYS MRS TLS BOD FCO CIA MXP LIN
         BGY FLR VCE NAP BLQ PMO BRU CRL AMS FRA MUC BER DUS ZRH GVA BSL VIE CPH PRG BUD WAW ATH IST OTP
-        CMN RAK TNG""".split(),
+        CMN RAK TNG DSS MLA KRK PSA CTA BRI FNC AGA FEZ NDR ALG TUN NTE BHX""".split(),
 }
 
 POR_CONSULTA = 7  # con 12 destinos a la vez Google Flights no devuelve nada; con 7 sí (probado nov-2026)

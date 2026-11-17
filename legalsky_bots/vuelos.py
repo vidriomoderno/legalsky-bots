@@ -89,6 +89,11 @@ NOMBRES = {
     "PMO": ("Palermo", "🇮🇹"), "DUS": ("Düsseldorf", "🇩🇪"), "BSL": ("Basilea", "🇨🇭"), "PRG": ("Praga", "🇨🇿"),
     "BUD": ("Budapest", "🇭🇺"), "WAW": ("Varsovia", "🇵🇱"), "ATH": ("Atenas", "🇬🇷"), "OTP": ("Bucarest", "🇷🇴"),
     "RAK": ("Marrakech", "🇲🇦"), "TNG": ("Tánger", "🇲🇦"),
+    "BJZ": ("Badajoz", "🇪🇸"), "RMU": ("Murcia", "🇪🇸"), "ZAZ": ("Zaragoza", "🇪🇸"), "DSS": ("Dakar", "🇸🇳"),
+    "MLA": ("Malta", "🇲🇹"), "KRK": ("Cracovia", "🇵🇱"), "PSA": ("Pisa", "🇮🇹"), "CTA": ("Catania", "🇮🇹"),
+    "BRI": ("Bari", "🇮🇹"), "FNC": ("Madeira", "🇵🇹"), "AGA": ("Agadir", "🇲🇦"), "FEZ": ("Fez", "🇲🇦"),
+    "NDR": ("Nador", "🇲🇦"), "ALG": ("Argel", "🇩🇿"), "TUN": ("Túnez", "🇹🇳"), "NTE": ("Nantes", "🇫🇷"),
+    "BHX": ("Birmingham", "🇬🇧"),
 }
 
 
