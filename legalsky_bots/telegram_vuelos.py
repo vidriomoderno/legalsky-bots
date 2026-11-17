@@ -3,6 +3,7 @@
 Variables de entorno:
     TELEGRAM_TOKEN          el que da @BotFather
     SERPAPI_KEY             clave de serpapi.com
+    HASDATA_KEY             (opcional) clave de hasdata.com, se usa cuando SerpApi agota sus consultas del mes
     USUARIOS_PERMITIDOS     números de usuario de Telegram separados por comas (los asesores)
     WEBHOOK_SECRETO         texto secreto cualquiera (Telegram lo manda en cada aviso)
     RENDER_EXTERNAL_URL     lo pone Render solo; dirección pública del servicio
@@ -186,7 +187,7 @@ def texto_resultado(b: Busqueda, opciones: list[serp.Opcion]) -> str:
 async def buscar_y_responder(chat: int, mensaje: int, aeropuerto: str, terminal: str, tipo: str):
     b = Busqueda(aeropuerto, terminal, tipo, ahora_en_espana())
     try:
-        opciones = await run_in_threadpool(serp.buscar, b, _env("SERPAPI_KEY"))
+        opciones = await run_in_threadpool(serp.buscar, b, _env("SERPAPI_KEY"), None, _env("HASDATA_KEY"))
     except Exception as e:  # noqa: BLE001 - al asesor se le explica y se registra
         log.exception("Error buscando vuelos")
         await telegram("editMessageText", chat_id=chat, message_id=mensaje,

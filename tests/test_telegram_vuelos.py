@@ -63,7 +63,7 @@ def test_desconocido_recibe_su_numero_y_no_puede_buscar(enviados):
 
 def test_flujo_completo_hasta_el_enlace(enviados, monkeypatch):
     vuelo = Vuelo("Iberia Express", "PMI", datetime(2026, 11, 13, 19, 0, tzinfo=ZONA), 26)
-    monkeypatch.setattr(serp, "buscar", lambda b, clave: [serp.Opcion(vuelo, "TOKEN")])
+    monkeypatch.setattr(serp, "buscar", lambda b, clave, *resto: [serp.Opcion(vuelo, "TOKEN")])
     monkeypatch.setattr(serp, "enlace_aerolinea",
                         lambda b, o, clave: ("https://booking.iberiaexpress.com/?to=PMI", {"url": "u"}))
 
@@ -85,7 +85,7 @@ def test_flujo_completo_hasta_el_enlace(enviados, monkeypatch):
 
 def test_si_no_se_resuelve_el_enlace_usa_la_pagina_puente(enviados, monkeypatch):
     vuelo = Vuelo("Vueling", "BCN", datetime(2026, 11, 13, 19, 0, tzinfo=ZONA), 30)
-    monkeypatch.setattr(serp, "buscar", lambda b, clave: [serp.Opcion(vuelo, "TOKEN")])
+    monkeypatch.setattr(serp, "buscar", lambda b, clave, *resto: [serp.Opcion(vuelo, "TOKEN")])
     peticion = {"url": "https://www.google.com/travel/clk/f", "post_data": "u=abc&x=1"}
     monkeypatch.setattr(serp, "enlace_aerolinea", lambda b, o, clave: ("", peticion))
     _correr(_boton(111, "x|MAD|T4|nacional"))

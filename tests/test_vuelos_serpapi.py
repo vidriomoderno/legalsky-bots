@@ -137,3 +137,34 @@ def test_nacional_con_escala_en_espana_si_sale():
                                            _tramo("x", "MAD", "AGP", "Air Europa")], "price": 90, "booking_token": "N"}]}
     elegidas = serp.mejores_opciones(serp.opciones_desde_respuesta(datos), Busqueda("BCN", "T1", "nacional", AHORA))
     assert [(o.vuelo.destino, o.vuelo.escalas_en) for o in elegidas] == [("AGP", "MAD")]
+
+
+def test_si_serpapi_se_agota_sigue_con_hasdata(monkeypatch):
+    monkeypatch.setattr(serp, "_serpapi_agotada_en", "")
+    pedidas = []
+
+    def responder(request):
+        pedidas.append(request.url.host)
+        if request.url.host == "serpapi.com":
+            return httpx.Response(200, json={"error": "Your account has run out of searches."})
+        assert request.headers["x-api-key"] == "hd" and request.url.params["type"] == "oneWay"
+        assert request.url.params["stops"] == "nonStop"
+        return httpx.Response(200, json={"bestFlights": [{"price": 64, "flights": [{
+            "departureAirport": {"id": "MAD", "time": "2026-11-13 20:45"},
+            "arrivalAirport": {"id": "FLR", "time": "2026-11-13 23:00"}, "airline": "Vueling"}]}]})
+
+    c = httpx.Client(transport=httpx.MockTransport(responder))
+    b = Busqueda("MAD", "T4", "internacional", AHORA)
+    elegidas = serp.buscar(b, "clave", c, "hd")
+    assert [(o.vuelo.destino, o.vuelo.precio, o.vuelo.llegada, o.fuente) for o in elegidas] == [
+        ("FLR", 64, "23:00", "hasdata")]
+    assert pedidas.count("serpapi.com") == 1  # agotada: ya no se le pregunta más este mes
+    assert serp.enlace_aerolinea(b, elegidas[0], "clave") == ("", None)
+
+
+def test_sin_hasdata_el_error_de_serpapi_llega_al_bot(monkeypatch):
+    monkeypatch.setattr(serp, "_serpapi_agotada_en", "")
+    c = httpx.Client(transport=httpx.MockTransport(
+        lambda r: httpx.Response(200, json={"error": "Your account has run out of searches."})))
+    with pytest.raises(serp.SinConsultas):
+        serp.buscar(Busqueda("MAD", "T4", "internacional", AHORA), "clave", c)

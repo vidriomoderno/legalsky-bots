@@ -8,6 +8,10 @@ Gasto en SerpApi (plan gratis: 250 consultas al mes):
   (todos los aeropuertos de AEROPUERTOS_TELEGRAM, en grupos de 7).
 - enlace_aerolinea(): 1 consulta, solo cuando el asesor pide el enlace de un vuelo.
 SerpApi no cobra la misma consulta repetida dentro de 1 hora (caché).
+
+Cuando se acaban las consultas gratis de SerpApi del mes, sigue con HasData (otro servicio que lee
+Google Flights, 1.000 créditos gratis al mes = unas 66 consultas). Los vuelos de HasData no traen
+enlace de la aerolínea: el bot ofrece abrirlos en Google Flights.
 """
 
 import html
@@ -20,6 +24,7 @@ import httpx
 from legalsky_bots.vuelos import ZONA, Busqueda, Vuelo, enlace_de_aerolinea, mejores
 
 API = "https://serpapi.com/search.json"
+API_HASDATA = "https://api.hasdata.com/scrape/google/flights"
 
 # Google Flights quiere aeropuertos, no códigos de ciudad: cada ciudad con sus aeropuertos.
 AEROPUERTOS_DE_CIUDAD = {
@@ -35,10 +40,15 @@ CIUDAD_DE_AEROPUERTO = {a: c for c, lista in AEROPUERTOS_DE_CIUDAD.items() for a
 class Opcion:
     vuelo: Vuelo
     booking_token: str  # para pedir después el enlace de la aerolínea
+    fuente: str = "serpapi"  # serpapi | hasdata
 
 
 class ErrorSerpApi(Exception):
     pass
+
+
+class SinConsultas(ErrorSerpApi):
+    """El servicio ya no tiene consultas este mes."""
 
 
 # Todos los aeropuertos con vuelo directo frecuente desde Madrid o Barcelona (no solo las ciudades
@@ -91,7 +101,7 @@ def opciones_desde_respuesta(datos: dict) -> list[Opcion]:
         try:
             hora = datetime.strptime(tramos[0]["departure_airport"]["time"], "%Y-%m-%d %H:%M").replace(tzinfo=ZONA)
             llegada_aeropuerto = tramos[-1]["arrival_airport"]["id"]
-            llegada = tramos[-1]["arrival_airport"].get("time", "")[-5:]
+            llegada = tramos[-1]["arrival_airport"].get("time", "").split(" ")[-1]
             precio = float(item["price"])
             escalas_en = ",".join(t["arrival_airport"]["id"] for t in tramos[:-1])
         except (KeyError, TypeError, ValueError):
@@ -101,7 +111,7 @@ def opciones_desde_respuesta(datos: dict) -> list[Opcion]:
             destino=CIUDAD_DE_AEROPUERTO.get(llegada_aeropuerto, llegada_aeropuerto),
             salida=hora, precio=precio, escalas=len(tramos) - 1, llegada=llegada, escalas_en=escalas_en,
         )
-        salida.append(Opcion(vuelo, str(item.get("booking_token") or "")))
+        salida.append(Opcion(vuelo, str(item.get("booking_token") or ""), str(datos.get("_fuente") or "serpapi")))
     return salida
 
 
@@ -121,17 +131,66 @@ def _consultar(cliente: httpx.Client, parametros: dict) -> dict:
         error = datos.get("error") or f"HTTP {r.status_code}"
         if "hasn't returned any results" in str(error):
             return {}
+        if "run out of searches" in str(error) or r.status_code == 429:
+            raise SinConsultas(error)
         raise ErrorSerpApi(error)
     return datos
 
 
-def buscar(b: Busqueda, clave: str, cliente: httpx.Client | None = None) -> list[Opcion]:
+def _tramo_hasdata(t: dict) -> dict:
+    return {"departure_airport": t.get("departureAirport") or {}, "arrival_airport": t.get("arrivalAirport") or {},
+            "airline": t.get("airline")}
+
+
+def respuesta_hasdata(datos: dict) -> dict:
+    """Pasa la respuesta de HasData (camelCase) al formato de SerpApi que entiende opciones_desde_respuesta."""
+    def lista(nombre):
+        return [{"flights": [_tramo_hasdata(t) for t in item.get("flights") or []], "price": item.get("price"),
+                 "booking_token": ""} for item in datos.get(nombre) or []]
+    return {"best_flights": lista("bestFlights"), "other_flights": lista("otherFlights"), "_fuente": "hasdata"}
+
+
+def _consultar_hasdata(cliente: httpx.Client, parametros: dict, clave: str) -> dict:
+    p = {"departureId": parametros["departure_id"], "arrivalId": parametros["arrival_id"],
+         "outboundDate": parametros["outbound_date"], "type": "oneWay", "currency": "EUR", "gl": "es", "hl": "es"}
+    if parametros.get("stops") == "1":
+        p["stops"] = "nonStop"
+    if parametros.get("outbound_times"):
+        p["outboundTimes"] = parametros["outbound_times"]
+    r = cliente.get(API_HASDATA, params=p, headers={"x-api-key": clave}, timeout=120)
+    if r.status_code == 403:
+        raise SinConsultas("HasData: créditos del mes agotados")
+    if r.status_code != 200:
+        raise ErrorSerpApi(f"HasData HTTP {r.status_code}: {r.text[:200]}")
+    return respuesta_hasdata(r.json())
+
+
+# Si SerpApi se queda sin consultas, no se le vuelve a preguntar hasta el mes siguiente.
+_serpapi_agotada_en: str = ""
+
+
+def _consultar_vuelos(c: httpx.Client, parametros: dict, clave_hasdata: str) -> dict:
+    global _serpapi_agotada_en
+    mes = datetime.now(ZONA).strftime("%Y-%m")
+    if _serpapi_agotada_en != mes:
+        try:
+            return _consultar(c, parametros)
+        except SinConsultas:
+            if not clave_hasdata:
+                raise
+            _serpapi_agotada_en = mes
+    if not clave_hasdata:
+        raise SinConsultas("SerpApi sin consultas este mes")
+    return _consultar_hasdata(c, parametros, clave_hasdata)
+
+
+def buscar(b: Busqueda, clave: str, cliente: httpx.Client | None = None, clave_hasdata: str = "") -> list[Opcion]:
     with cliente or httpx.Client() as c:
         opciones = []
         for dia in dias(b):
             for grupo in aeropuertos_destino(b.aeropuerto, b.tipo):
                 parametros = {**_parametros(b, dia, grupo, clave), "outbound_times": franja(b, dia)}
-                opciones += opciones_desde_respuesta(_consultar(c, parametros))
+                opciones += opciones_desde_respuesta(_consultar_vuelos(c, parametros, clave_hasdata))
     return mejores_opciones(opciones, b)
 
 
@@ -166,7 +225,7 @@ def resolver_enlace(peticion: dict, cliente: httpx.Client) -> str:
 
 def enlace_aerolinea(b: Busqueda, opcion: Opcion, clave: str, cliente: httpx.Client | None = None) -> tuple[str, dict | None]:
     """Devuelve (enlace directo de la aerolínea o "", petición de Google para abrirla desde el móvil)."""
-    if not opcion.booking_token:
+    if not opcion.booking_token or opcion.fuente != "serpapi":
         return "", None
     with cliente or httpx.Client() as c:
         destino = ",".join(AEROPUERTOS_DE_CIUDAD.get(opcion.vuelo.destino, [opcion.vuelo.destino]))

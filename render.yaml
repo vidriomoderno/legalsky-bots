@@ -16,6 +16,8 @@ services:
         sync: false
       - key: SERPAPI_KEY
         sync: false
+      - key: HASDATA_KEY
+        sync: false
       - key: USUARIOS_PERMITIDOS
         sync: false
       - key: WEBHOOK_SECRETO
