@@ -9,9 +9,11 @@
            "DOCUMENTO 3", y por captura su título, la URL de donde sale y la captura. Sin --titulo:
            "FR7958 - VUELO RETRASADO" (con escala, los siguientes "CONEXIÓN PERDIDA").
     python scripts/pruebas_retraso.py anotar ID_CRM CODIGO ESTADO "DETALLE"
-        ESTADO: subida | menos_3h | no_encontrado | revisar
+        ESTADO: subida | rehecha | menos_3h | no_encontrado | revisar
     python scripts/pruebas_retraso.py hechos
         -> ids del CRM que ya tienen prueba subida por el bot (para no gastar créditos otra vez).
+    python scripts/pruebas_retraso.py rehacer
+        -> vuelos de scripts/rehacer.json cuyo PDF del bot hay que borrar y volver a subir.
     python scripts/pruebas_retraso.py resumen
         -> lo anotado hoy, agrupado por estado.
 """
@@ -29,7 +31,8 @@ TRABAJO = RAIZ / "trabajo"
 CARPETA_PDF = TRABAJO / "pruebas"
 REGISTRO = TRABAJO / "pruebas_retraso.json"
 ZONA = ZoneInfo("Europe/Madrid")
-ESTADOS = ("subida", "menos_3h", "no_encontrado", "revisar")
+ESTADOS = ("subida", "rehecha", "menos_3h", "no_encontrado", "revisar")
+REHACER = RAIZ / "scripts" / "rehacer.json"
 
 
 def vuelo_a_buscar(codigo: str) -> dict | None:
@@ -207,6 +210,19 @@ def anotar(id_crm: str, codigo: str, estado: str, detalle: str) -> None:
     REGISTRO.write_text(json.dumps(datos, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
+def por_rehacer() -> list[dict]:
+    """Vuelos de scripts/rehacer.json cuyo PDF del bot hay que cambiar y que aún no se han rehecho aquí."""
+    lista = json.loads(REHACER.read_text(encoding="utf-8")) if REHACER.exists() else []
+    hechos = _leer()
+    return [v for v in lista if hechos.get(str(v["id"]), {}).get("estado") != "rehecha"]
+
+
+def es_pdf_del_bot(fichero: str, codigo: str) -> bool:
+    """True si el nombre (tal como lo guarda el CRM) es el de un PDF que subió el bot para ese vuelo."""
+    limpio = re.sub(r"[^a-z0-9-]", "", codigo.lower())
+    return re.fullmatch(rf"{re.escape(limpio)}_\d{{4}}-\d{{2}}-\d{{2}}_[a-z0-9-]+\.pdf", fichero.lower()) is not None
+
+
 def resumen() -> str:
     hoy = datetime.now(ZONA).strftime("%Y-%m-%d")
     del_dia = {k: v for k, v in _leer().items() if v["fecha"].startswith(hoy)}
@@ -242,6 +258,7 @@ def main(argv: list[str]) -> None:
     a.add_argument("estado")
     a.add_argument("detalle", nargs="?", default="")
     sub.add_parser("hechos")
+    sub.add_parser("rehacer")
     sub.add_parser("resumen")
     args = p.parse_args(argv)
 
@@ -264,6 +281,8 @@ def main(argv: list[str]) -> None:
         print("ok")
     elif args.orden == "hechos":
         print(json.dumps(sorted(k for k, v in _leer().items() if v["estado"] in ("subida", "menos_3h"))))
+    elif args.orden == "rehacer":
+        print(json.dumps(por_rehacer(), ensure_ascii=False))
     else:
         print(resumen())
 

@@ -69,3 +69,18 @@ def test_anotar_hechos_y_resumen(tmp_path, monkeypatch, capsys):
     assert '["48571"]' in capsys.readouterr().out
     texto = pr.resumen()
     assert "subida: 1" in texto and "VY1: ruta distinta" in texto
+
+
+def test_rehacer(tmp_path, monkeypatch):
+    import json as _json
+    monkeypatch.setattr(pr, "REHACER", tmp_path / "rehacer.json")
+    monkeypatch.setattr(pr, "REGISTRO", tmp_path / "reg.json")
+    monkeypatch.setattr(pr, "TRABAJO", tmp_path)
+    (tmp_path / "rehacer.json").write_text(_json.dumps([{"id": "1", "codigo": "IB1195"}, {"id": "2", "codigo": "W67022"}]), encoding="utf-8")
+    assert [v["id"] for v in pr.por_rehacer()] == ["1", "2"]
+    pr.anotar("1", "IB1195", "rehecha", "")
+    assert [v["id"] for v in pr.por_rehacer()] == ["2"]
+    assert pr.es_pdf_del_bot("ib1195_2026-11-17_mad-tls-1795092861.pdf", "IB1195")
+    assert pr.es_pdf_del_bot("ib1048-563_2026-11-17_scq-agp-1795.pdf", "IB1048-563")
+    assert not pr.es_pdf_del_bot("ib1195_2026-11-17_mad-tls-1795092861.pdf", "IB119")
+    assert not pr.es_pdf_del_bot("Pantallazo IB1195.pdf", "IB1195")

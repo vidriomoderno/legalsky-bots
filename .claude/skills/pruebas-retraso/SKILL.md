@@ -57,6 +57,10 @@ esta skill. Ejecútalo siempre exactamente así, sin `cd` delante ni rutas compl
      ella en Chrome (pulsando "Acceder" / "Log in") y que luego vuelva a hacer doble clic en
      el icono "Pruebas de retraso LegalSky".
 3. `python scripts/pruebas_retraso.py hechos` → ids del CRM que el bot ya hizo (no repetir).
+   `python scripts/pruebas_retraso.py rehacer` → vuelos cuyo PDF del bot hay que **cambiar**
+   (p. ej. porque salió en inglés). Esos van **primero** y cuentan como pendientes aunque ya
+   tengan fichero, estén en `hechos` o sean de otra fecha: abre su ficha
+   (`?type=_write&id=ID`) para leer código, origen, destino y fecha, y sigue el punto 2.
 4. En FlightStats (`https://www.flightstats.com/v2/historical-flight/search`) lee **Monthly
    Credits** y **Reserve Credits**. Cada vuelo nuevo gasta 1 crédito (volver a abrir uno ya
    consultado no gasta). Si la suma es menor que 5, para y avisa.
@@ -165,10 +169,27 @@ Un vuelo está **pendiente** si cumple todo esto:
    Espera 3 s, recarga la página, abre Repositorio otra vez y **comprueba** que en
    "Ficheros incluídos" aparece un fichero nuevo con el nombre del vuelo. Si no aparece,
    inténtalo una vez más; si sigue sin aparecer, anota `revisar` "no se pudo subir".
-   Nunca pulses "Borrar" ni cambies nada de la pestaña General.
+   Nunca pulses "Borrar" ni cambies nada de la pestaña General. **Única excepción**, los
+   vuelos de `rehacer`: **después** de comprobar que el PDF nuevo ya está en "Ficheros
+   incluídos", borra el PDF **viejo del bot**. Lista los ficheros con este JavaScript (solo lee):
+   ```js
+   [...document.querySelectorAll('a[href*="nmdb-delete-ftp-id_ftp"]')].map(a => {
+     const fila = a.closest('tr, li, .row, div');
+     const f = fila && [...fila.querySelectorAll('a[href*="/file/"]')].map(x => x.href.split('/file/')[1])[0];
+     return {fichero: f ? decodeURIComponent(f) : (fila ? fila.innerText.trim().slice(0, 80) : ''), borrar: a.href};
+   })
+   ```
+   Borra solo si se cumplen las tres: el nombre es de un PDF del bot (`python -c "import sys;
+   sys.path.insert(0,'scripts'); import pruebas_retraso as p; print(p.es_pdf_del_bot('NOMBRE','CODIGO'))"`
+   da `True`), **no** es el que acabas de subir (el nuevo tiene el número final más alto) y
+   queda al menos el nuevo. Para borrarlo abre con `navigate` su enlace `borrar` (es un enlace
+   normal, no sale ningún aviso). Recarga, abre Repositorio y comprueba que el viejo ya no está
+   y el nuevo sí. Nunca borres ficheros de la asesora ni nada que no sea un PDF del bot.
 8. Anota el resultado:
    `python scripts/pruebas_retraso.py anotar ID CODIGO ESTADO "DETALLE"`
    - `subida` → "retraso llegada 3 h 39 min (FlightStats)" (o "cancelado").
+   - `rehecha` → para los vuelos de `rehacer` cuando el nuevo está subido y el viejo borrado
+     (detalle: "PDF cambiado: captura en castellano"). Si algo falla, `revisar`.
    - `menos_3h` → se sube igual, pero el detalle avisa: "retraso llegada 1 h 20 min".
    - Con escala, usa siempre `subida` (el retraso final depende del vuelo en que reubicaron
      al pasajero, que FlightStats no sabe) y pon los datos de cada tramo: "escala: IB1048
