@@ -35,23 +35,26 @@ def test_nombre_pdf():
 def test_crear_pdf(tmp_path):
     img = tmp_path / "c.jpg"
     img.write_bytes(JPEG_2x1)
-    pdf = pr.crear_pdf([(img, ["Vuelo FR7958", "Fuente: FlightStats"])], tmp_path / "x" / "p.pdf")
+    pdf = pr.crear_pdf([{"imagen": img, "titulo": "FR7958 - VUELO RETRASADO", "url": "https://x/y"}],
+                       tmp_path / "x" / "p.pdf")
     datos = pdf.read_bytes()
     assert datos.startswith(b"%PDF") and b"/Width 2 /Height 1" in datos and datos.rstrip().endswith(b"%%EOF")
-    assert b"/Count 1" in datos
+    assert b"/Count 1" in datos and b"(DOCUMENTO 3)" in datos and b"/MediaBox [0 0 595.28 841.89]" in datos
+    assert b"/URI (https://x/y)" in datos and b"(https://x/y) Tj" in datos
     assert pr.medidas_jpeg(JPEG_2x1) == (2, 1)
 
 
-def test_pdf_con_escala_una_pagina_por_tramo(tmp_path, monkeypatch, capsys):
+def test_pdf_con_escala_como_la_asesora(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(pr, "CARPETA_PDF", tmp_path)
     img = tmp_path / "c.jpg"
     img.write_bytes(JPEG_2x1)
     pr.main(["pdf", str(img), str(img), "--vuelo", "IB1048-563", "--fecha", "2026-11-17", "--ruta", "SCQ-AGP",
-             "--url", "u1", "--url", "u2", "--titulo", "Tramo 1: IB1048 - vuelo retrasado",
-             "--titulo", "Tramo 2: IB563 - conexion perdida"])
+             "--url", "u1", "--url", "u2"])
     datos = (tmp_path / "IB1048-563_2026-11-17_SCQ-AGP.pdf").read_bytes()
-    assert b"/Count 2" in datos and b"conexion perdida" in datos and b"(Fuente: FlightStats (Historical Flight Status) - u2)" not in datos
-    assert b"u2" in datos
+    # Los dos tramos en la misma página, con los títulos de la asesora.
+    assert b"/Count 1" in datos and b"(IB1048 - VUELO RETRASADO)" in datos
+    assert "(IB563 - CONEXIÓN PERDIDA)".encode("cp1252") in datos and b"/URI (u2)" in datos
+    assert pr.titulos_por_defecto("W67022", 1) == ["W67022 - VUELO RETRASADO"]
     import pytest
     with pytest.raises(SystemExit):
         pr.main(["pdf", str(img), str(img), "--vuelo", "X", "--fecha", "d", "--ruta", "r", "--url", "u1"])

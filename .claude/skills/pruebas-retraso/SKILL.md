@@ -112,12 +112,15 @@ Un vuelo está **pendiente** si cumple todo esto:
    - Sin escala:
      `python scripts/pruebas_retraso.py pdf "<captura>" --vuelo CODIGO_CRM --fecha AAAA-MM-DD
      --ruta ORIGEN-DESTINO --url "<URL de FlightStats>"`
-   - Con escala, **un solo PDF** con todas las capturas, una `--url` y un `--titulo` por
-     captura y en el mismo orden:
+   - Con escala, **un solo PDF** con todas las capturas, una `--url` por captura y en el
+     mismo orden:
      `python scripts/pruebas_retraso.py pdf "<captura1>" "<captura2>" --vuelo IB1048-563
-     --fecha AAAA-MM-DD --ruta SCQ-AGP --url "<URL1>" --url "<URL2>"
-     --titulo "Tramo 1: IB1048 SCQ-MAD - vuelo retrasado"
-     --titulo "Tramo 2: IB563 MAD-AGP - conexion perdida"`
+     --fecha AAAA-MM-DD --ruta SCQ-AGP --url "<URL1>" --url "<URL2>"`
+   El PDF sale como el de la asesora: "DOCUMENTO 3" arriba y, por captura, su título
+   ("IB1048 - VUELO RETRASADO", los siguientes "IB563 - CONEXIÓN PERDIDA"), la URL exacta de
+   la pestaña (cópiala de la barra de direcciones, con el número final) y la captura. Solo si
+   el tramo retrasado **no** es el primero, pon un `--titulo` por captura, p. ej.
+   `--titulo "UX198 - EN HORA" --titulo "UX7703 - VUELO RETRASADO"`.
    Imprime la ruta del PDF (en `trabajo/pruebas/`). La fecha es la real del primer tramo.
 6. **Si FlightStats no lo tiene** y la aerolínea es Vueling (VY), usa
    `https://www.vueling.com/es/estado-de-vuelos` → "Número de vuelo" + fecha → "Ver detalles"
