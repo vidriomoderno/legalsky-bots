@@ -234,6 +234,7 @@ def main(argv: list[str]) -> None:
     f.add_argument("--url", action="append", required=True, help="una por captura, en el mismo orden")
     f.add_argument("--titulo", action="append", default=[], help="opcional, uno por captura")
     f.add_argument("--fuente", default="FlightStats (Historical Flight Status)")
+    f.add_argument("--capturado", default="", help='"dd/mm/AAAA HH:MM" si la captura no es de ahora')
     f.add_argument("--documento", default="3", help='"DOCUMENTO 3" arriba, como la asesora; "" para quitarlo')
     a = sub.add_parser("anotar")
     a.add_argument("id_crm")
@@ -250,7 +251,7 @@ def main(argv: list[str]) -> None:
         n = len(args.imagenes)
         if len(args.url) != n or (args.titulo and len(args.titulo) != n):
             sys.exit(f"Hay {n} capturas: hace falta una --url por captura (y un --titulo por captura si se usa).")
-        ahora = datetime.now(ZONA).strftime("%d/%m/%Y %H:%M")
+        ahora = args.capturado or datetime.now(ZONA).strftime("%d/%m/%Y %H:%M")
         destino = CARPETA_PDF / nombre_pdf(args.vuelo, args.fecha, args.ruta)
         titulos = args.titulo or titulos_por_defecto(args.vuelo, n)
         bloques = [{"imagen": img, "titulo": t, "url": u} for img, t, u in zip(args.imagenes, titulos, args.url)]
