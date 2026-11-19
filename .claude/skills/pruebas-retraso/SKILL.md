@@ -37,14 +37,29 @@ esta skill. Ejecútalo siempre exactamente así, sin `cd` delante ni rutas compl
      abierta (el CRM muestra la lista de vuelos, no el login; FlightStats pone "Logout"),
      **ese es el bueno**: sigue con él. Si no responde, da error o falta alguna sesión,
      cierra esas pestañas y prueba el siguiente.
-   - Si ninguno vale, para y di en el resumen en qué Chrome falta qué sesión. Nunca uses
-     `switch_browser` (espera a que alguien pulse un botón).
-2. `python scripts/pruebas_retraso.py hechos` → ids del CRM que el bot ya hizo (no repetir).
-3. Abre `https://www.flightstats.com/v2/historical-flight/search` y lee **Monthly Credits** y
-   **Reserve Credits**. Si sale "Login" en vez de "Logout", o el CRM pide usuario y
-   contraseña, **para** y pide al usuario que inicie sesión (tú nunca escribes contraseñas).
-   Cada vuelo nuevo gasta 1 crédito (volver a abrir uno ya consultado no gasta). Si la
-   suma es menor que 5, para y avisa.
+   - Si ninguno tiene las dos sesiones, quédate con el primero que responda (en ese orden).
+     Nunca uses `switch_browser` (espera a que alguien pulse un botón).
+2. **Si falta una sesión, espera a que la inicien (no pares a la primera).** Es normal: el
+   CRM y FlightStats cierran la sesión cuando la misma cuenta entra desde otro ordenador, y
+   una pestaña abierta desde antes puede parecer conectada sin estarlo. Basta con que la
+   persona entre en la pestaña que tú le dejas (Chrome suele tener usuario y contraseña
+   guardados: solo pulsar "Acceder" / "Log in").
+   - Deja abierta la pestaña de acceso (CRM: `https://crmlegalsky.com/web/backoffice/`;
+     FlightStats: su página de Login), ponla delante (`computer` screenshot sobre ella) y
+     muestra este aviso con JavaScript:
+     `const d=document.createElement('div');d.id='aviso-legalsky';d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#d32f2f;color:#fff;font:bold 20px Arial;padding:16px;text-align:center';d.textContent='BOT LEGALSKY: inicia sesión AQUÍ, en esta ventana (no en otra). El bot espera 5 minutos y sigue solo.';document.body.prepend(d)`
+   - Comprueba cada ~15 s (`computer` wait 10 + volver a mirar la pestaña; si navegó o se
+     recargó, vuelve a poner el aviso) durante **5 minutos** como máximo. En cuanto el CRM
+     muestre la lista de vuelos (o FlightStats ponga "Logout"), sigue.
+   - Tú **nunca** escribes usuario ni contraseña ni pulsas "Acceder": eso lo hace la persona.
+   - Si pasan 5 minutos sin sesión, para. En el resumen, en 2 o 3 frases sencillas y sin
+     correos, rutas ni comandos: qué página pide entrar (CRM o FlightStats), que entre en
+     ella en Chrome (pulsando "Acceder" / "Log in") y que luego vuelva a hacer doble clic en
+     el icono "Pruebas de retraso LegalSky".
+3. `python scripts/pruebas_retraso.py hechos` → ids del CRM que el bot ya hizo (no repetir).
+4. En FlightStats (`https://www.flightstats.com/v2/historical-flight/search`) lee **Monthly
+   Credits** y **Reserve Credits**. Cada vuelo nuevo gasta 1 crédito (volver a abrir uno ya
+   consultado no gasta). Si la suma es menor que 5, para y avisa.
 
 ## 1. Vuelos pendientes (sin abrirlos uno a uno)
 
