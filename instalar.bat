@@ -3,7 +3,7 @@ setlocal
 chcp 65001 >nul
 title LegalSky - Instalar bots
 rem ======================================================================
-rem  LegalSky - Instalador de los bots (facturas y vuelos)
+rem  LegalSky - Instalador de los bots (facturas, vuelos y pruebas de retraso)
 rem  Doble clic una vez. Instala Python y Claude Code si faltan, baja el
 rem  programa a Documentos\bot legal sky, inicia sesion en Claude y crea
 rem  los accesos directos del Escritorio. Se puede repetir sin problema.
@@ -80,13 +80,14 @@ echo [4/6] Configuracion lista.
 rem ------------------------------------------------- 5. Accesos directos
 if not defined LEGALSKY_PRUEBA powershell -NoProfile -Command ^
   "$e = [Environment]::GetFolderPath('Desktop'); $w = New-Object -ComObject WScript.Shell;" ^
-  "foreach ($a in @(@('Pedir facturas LegalSky','pedir_facturas.bat'), @('Buscar vuelos LegalSky','buscar_vuelos.bat'))) {" ^
+  "foreach ($a in @(@('Pedir facturas LegalSky','pedir_facturas.bat'), @('Buscar vuelos LegalSky','buscar_vuelos.bat'), @('Pruebas de retraso LegalSky','pruebas_retraso.bat'))) {" ^
   " $s = $w.CreateShortcut((Join-Path $e ($a[0] + '.lnk'))); $s.TargetPath = (Join-Path $env:DESTINO $a[1]);" ^
   " $s.WorkingDirectory = $env:DESTINO; $s.Save() }" >nul 2>nul
 echo [5/6] Accesos directos creados en el Escritorio.
 
 rem ------------------------------------------------- 6. Cuenta de Claude
-call "%CLAUDE%" auth status >nul 2>nul
+rem "auth status" puede decir que si aunque la sesion haya caducado: se prueba de verdad.
+call "%CLAUDE%" -p "Responde solo: ok" --max-turns 1 >nul 2>nul
 if not errorlevel 1 goto :sesion_ok
 echo.
 echo  Ahora se abre el navegador para entrar con tu cuenta de Claude (Pro o Max).
@@ -94,7 +95,7 @@ echo  1. Entra con la cuenta y pulsa Autorizar.
 echo  2. Si la pagina te muestra un CODIGO, pulsa "Copiar", vuelve a esta ventana,
 echo     haz clic derecho para pegarlo y pulsa Enter.
 call "%CLAUDE%" auth login
-call "%CLAUDE%" auth status >nul 2>nul
+call "%CLAUDE%" -p "Responde solo: ok" --max-turns 1 >nul 2>nul
 if errorlevel 1 (echo. & echo  No se pudo iniciar sesion en Claude. Vuelve a intentarlo o llama a Juan Fernando. & goto :fin_error)
 :sesion_ok
 echo [6/6] Sesion de Claude iniciada.
@@ -110,6 +111,7 @@ echo  ============================================================
 echo   LISTO. Ya puedes usar los iconos del Escritorio:
 echo     - Pedir facturas LegalSky
 echo     - Buscar vuelos LegalSky
+echo     - Pruebas de retraso LegalSky
 echo   Antes de usarlos, abre siempre Google Chrome.
 echo  ============================================================
 goto :fin_ok
