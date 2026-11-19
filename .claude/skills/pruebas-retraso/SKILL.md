@@ -24,7 +24,21 @@ esta skill. Ejecútalo siempre exactamente así, sin `cd` delante ni rutas compl
 
 1. Carga las herramientas de Claude in Chrome en **una sola** búsqueda de herramientas
    (tabs_context_mcp, tabs_create_mcp, navigate, computer, get_page_text, find,
-   javascript_tool, file_upload, tabs_close_mcp) y trabaja en pestañas nuevas.
+   javascript_tool, file_upload, tabs_close_mcp, list_connected_browsers, select_browser)
+   y trabaja en pestañas nuevas.
+   **Elige tú el Chrome, nunca preguntes** (nadie puede contestarte: vas en automático).
+   Llama a `list_connected_browsers`:
+   - Si hay uno solo, o uno ya marcado `inUse`, usa ese.
+   - Si hay varios, ordénalos así: primero los `onThisComputer: true`, luego `isLocal: true`,
+     luego el resto. Con cada uno, por orden: `select_browser` con su deviceId →
+     `tabs_context_mcp` con createIfEmpty → pestaña nueva en
+     `https://crmlegalsky.com/backoffice/menus/vuelos-5497?type=_view` y otra en
+     `https://www.flightstats.com/v2/historical-flight/search`. Si los dos tienen la sesión
+     abierta (el CRM muestra la lista de vuelos, no el login; FlightStats pone "Logout"),
+     **ese es el bueno**: sigue con él. Si no responde, da error o falta alguna sesión,
+     cierra esas pestañas y prueba el siguiente.
+   - Si ninguno vale, para y di en el resumen en qué Chrome falta qué sesión. Nunca uses
+     `switch_browser` (espera a que alguien pulse un botón).
 2. `python scripts/pruebas_retraso.py hechos` → ids del CRM que el bot ya hizo (no repetir).
 3. Abre `https://www.flightstats.com/v2/historical-flight/search` y lee **Monthly Credits** y
    **Reserve Credits**. Si sale "Login" en vez de "Logout", o el CRM pide usuario y

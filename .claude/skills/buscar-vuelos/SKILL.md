@@ -23,7 +23,11 @@ con `destino`, `dia` y `url`.
 ## 2. Leer Google Flights
 
 Carga las herramientas de Claude in Chrome con una sola búsqueda de herramientas y trabaja en
-una pestaña nueva, sin tocar las de Fede. Para cada consulta:
+una pestaña nueva, sin tocar las de Fede (incluye `list_connected_browsers` y `select_browser`).
+**Elige tú el Chrome, nunca preguntes** (vas en automático): con `list_connected_browsers`, si
+hay uno solo o uno `inUse`, ese; si hay varios, prueba por orden (`onThisComputer: true`, luego
+`isLocal: true`, luego el resto) con `select_browser` + `tabs_context_mcp` (createIfEmpty) y
+quédate con el primero que responda. Nunca uses `switch_browser`. Para cada consulta:
 
 1. Abre su `url`. Si sale un aviso de cookies, rechaza las no esenciales.
 2. Lee el texto de la página (no hace falta captura) y anota cada vuelo cuya salida esté entre
