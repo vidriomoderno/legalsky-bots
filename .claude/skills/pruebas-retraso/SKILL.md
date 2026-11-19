@@ -122,8 +122,15 @@ Un vuelo está **pendiente** si cumple todo esto:
    Arrived") y si está cancelado ("Cancelled").
 5. **Captura**, una por tramo (en la pestaña de FlightStats, en el orden de los tramos):
    - JavaScript: `document.body.style.zoom='0.6'; window.scrollTo(0,0)`
+   - **Ponla en castellano** (Fede lo exige: el pantallazo no puede quedar en inglés). Lee
+     `scripts/traducir_flightstats.js` (Read) y pásalo **tal cual** a javascript_tool en esa
+     pestaña. Devuelve `traducidos` y `quedan_en_ingles`; lo que quede en inglés en la parte
+     de arriba (salvo nombres de avión, aerolínea o "CET") tradúcelo tú con un pequeño
+     JavaScript que cambie solo ese texto. No recargues la página después (volvería al inglés).
    - screenshot con `save_to_disk: true` y **sin `scale`** (tamaño completo). Mira que se
-     vean el número de vuelo, salida y llegada con las horas programadas y reales.
+     vean el número de vuelo, salida y llegada con las horas programadas y reales, y que
+     todo esté en castellano ("Salida", "Llegada", "Programada", "Real"...). Si ves inglés,
+     vuelve a pasar el script y repite la captura.
    - Sin escala:
      `python scripts/pruebas_retraso.py pdf "<captura>" --vuelo CODIGO_CRM --fecha AAAA-MM-DD
      --ruta ORIGEN-DESTINO --url "<URL de FlightStats>"`
