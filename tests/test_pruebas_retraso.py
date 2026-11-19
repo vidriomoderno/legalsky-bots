@@ -16,11 +16,13 @@ JPEG_2x1 = base64.b64decode(
 
 
 def test_vuelo_a_buscar():
-    assert pr.vuelo_a_buscar("FR7958") == {"aerolinea": "FR", "numero": "7958", "con_escala": False, "tramos": 1}
-    assert pr.vuelo_a_buscar("W67022")["aerolinea"] == "W6"
-    assert pr.vuelo_a_buscar("IB1048-563") == {"aerolinea": "IB", "numero": "563", "con_escala": True, "tramos": 2}
-    assert pr.vuelo_a_buscar("UX198-7703")["numero"] == "7703"
-    assert pr.vuelo_a_buscar("AZ78")["numero"] == "78"
+    directo = pr.vuelo_a_buscar("FR7958")
+    assert directo == {"tramos": [{"aerolinea": "FR", "numero": "7958"}], "con_escala": False}
+    assert pr.vuelo_a_buscar("W67022")["tramos"][0]["aerolinea"] == "W6"
+    escala = pr.vuelo_a_buscar("IB1048-563")
+    assert escala["con_escala"] and [t["numero"] for t in escala["tramos"]] == ["1048", "563"]
+    assert [t["numero"] for t in pr.vuelo_a_buscar("UX198-7703")["tramos"]] == ["198", "7703"]
+    assert pr.vuelo_a_buscar("AZ78")["tramos"][0]["numero"] == "78"
     for raro in ("CONEXIONES", "IB258/256", "", "1234"):
         assert pr.vuelo_a_buscar(raro) is None
 
@@ -33,10 +35,26 @@ def test_nombre_pdf():
 def test_crear_pdf(tmp_path):
     img = tmp_path / "c.jpg"
     img.write_bytes(JPEG_2x1)
-    pdf = pr.crear_pdf(img, tmp_path / "x" / "p.pdf", ["Vuelo FR7958", "Fuente: FlightStats"])
+    pdf = pr.crear_pdf([(img, ["Vuelo FR7958", "Fuente: FlightStats"])], tmp_path / "x" / "p.pdf")
     datos = pdf.read_bytes()
     assert datos.startswith(b"%PDF") and b"/Width 2 /Height 1" in datos and datos.rstrip().endswith(b"%%EOF")
+    assert b"/Count 1" in datos
     assert pr.medidas_jpeg(JPEG_2x1) == (2, 1)
+
+
+def test_pdf_con_escala_una_pagina_por_tramo(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(pr, "CARPETA_PDF", tmp_path)
+    img = tmp_path / "c.jpg"
+    img.write_bytes(JPEG_2x1)
+    pr.main(["pdf", str(img), str(img), "--vuelo", "IB1048-563", "--fecha", "2026-11-17", "--ruta", "SCQ-AGP",
+             "--url", "u1", "--url", "u2", "--titulo", "Tramo 1: IB1048 - vuelo retrasado",
+             "--titulo", "Tramo 2: IB563 - conexion perdida"])
+    datos = (tmp_path / "IB1048-563_2026-11-17_SCQ-AGP.pdf").read_bytes()
+    assert b"/Count 2" in datos and b"conexion perdida" in datos and b"(Fuente: FlightStats (Historical Flight Status) - u2)" not in datos
+    assert b"u2" in datos
+    import pytest
+    with pytest.raises(SystemExit):
+        pr.main(["pdf", str(img), str(img), "--vuelo", "X", "--fecha", "d", "--ruta", "r", "--url", "u1"])
 
 
 def test_anotar_hechos_y_resumen(tmp_path, monkeypatch, capsys):

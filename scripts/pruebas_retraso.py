@@ -1,11 +1,12 @@
 """Ayudas para la skill pruebas-retraso (prueba del retraso de cada vuelo del CRM).
 
     python scripts/pruebas_retraso.py buscar CODIGO
-        -> JSON con la aerolínea y el número que hay que buscar en FlightStats
-           (en vuelos con escala, el último tramo: el que llega al destino).
-    python scripts/pruebas_retraso.py pdf IMAGEN --vuelo FR7958 --fecha 2026-11-16 --ruta ORK-BCN --url URL
-        -> convierte la captura en PDF (trabajo/pruebas/FR7958_2026-11-16_ORK-BCN.pdf) con una
-           cabecera que dice de dónde sale y cuándo se capturó. Imprime la ruta del PDF.
+        -> JSON con los tramos (aerolínea y número) que hay que buscar en FlightStats.
+           Con escala (IB1048-563) son todos los tramos, en orden, como hace la asesora.
+    python scripts/pruebas_retraso.py pdf IMAGEN [IMAGEN ...] --vuelo FR7958 --fecha 2026-11-16
+            --ruta ORK-BCN --url URL [--url URL2 ...] [--titulo T1 --titulo T2 ...]
+        -> un PDF (trabajo/pruebas/FR7958_2026-11-16_ORK-BCN.pdf) con una página por captura y
+           una cabecera que dice de dónde sale y cuándo se capturó. Imprime la ruta del PDF.
     python scripts/pruebas_retraso.py anotar ID_CRM CODIGO ESTADO "DETALLE"
         ESTADO: subida | menos_3h | no_encontrado | revisar
     python scripts/pruebas_retraso.py hechos
@@ -31,14 +32,18 @@ ESTADOS = ("subida", "menos_3h", "no_encontrado", "revisar")
 
 
 def vuelo_a_buscar(codigo: str) -> dict | None:
-    """'FR7958' -> FR 7958; 'IB1048-563' -> IB 563 (último tramo). None si no se puede saber."""
+    """'FR7958' -> un tramo FR 7958; 'IB1048-563' -> dos tramos, IB 1048 y IB 563, en orden.
+
+    Como hace la asesora, en un vuelo con escala se capturan TODOS los tramos: el primero es el
+    vuelo retrasado y el siguiente la conexión perdida. None si el código no se puede buscar.
+    """
     c = codigo.strip().upper().replace(" ", "")
     m = re.fullmatch(r"([A-Z0-9]{2})(\d{1,4})((?:-\d{1,4})*)", c)
     if not m or not re.search(r"[A-Z]", m.group(1)):
         return None  # CONEXIONES, códigos con "/", vacíos...
-    tramos = [m.group(2)] + [t for t in m.group(3).split("-") if t]
-    return {"aerolinea": m.group(1), "numero": tramos[-1].lstrip("0") or "0",
-            "con_escala": len(tramos) > 1, "tramos": len(tramos)}
+    numeros = [m.group(2)] + [t for t in m.group(3).split("-") if t]
+    tramos = [{"aerolinea": m.group(1), "numero": n.lstrip("0") or "0"} for n in numeros]
+    return {"tramos": tramos, "con_escala": len(tramos) > 1}
 
 
 def nombre_pdf(vuelo: str, fecha: str, ruta: str) -> str:
@@ -69,28 +74,36 @@ def _texto_pdf(s: str) -> bytes:
     return s.encode("cp1252", "replace")
 
 
-def crear_pdf(imagen: Path, destino: Path, cabecera: list[str]) -> Path:
-    """PDF de una página: cabecera de texto y debajo la captura (JPEG), sin librerías externas."""
-    jpg = imagen.read_bytes()
-    ancho, alto = medidas_jpeg(jpg)
-    escala = 0.75  # píxeles -> puntos
-    w, h_img = ancho * escala, alto * escala
-    linea, margen = 16, 14
-    h_cab = margen * 2 + linea * len(cabecera)
-    h = h_img + h_cab
-    textos = b"".join(b"BT /F1 11 Tf %.1f %.1f Td (%s) Tj ET\n" % (margen, h - margen - 11 - k * linea, _texto_pdf(t))
-                      for k, t in enumerate(cabecera))
-    contenido = textos + b"q %.2f 0 0 %.2f 0 0 cm /Im1 Do Q\n" % (w, h_img)
+def crear_pdf(paginas: list[tuple[Path, list[str]]], destino: Path) -> Path:
+    """PDF con una página por captura: cabecera de texto y debajo la captura (JPEG).
+
+    Sin librerías externas (el Python del PC puede no tener Pillow).
+    """
+    escala, linea, margen = 0.75, 16, 14  # píxeles -> puntos
+    n = len(paginas)
+    # Objetos: 1 catálogo, 2 páginas, 3 fuente; luego por página: página, contenido, imagen.
+    kids = " ".join(f"{4 + 3 * i} 0 R" for i in range(n)).encode()
     objetos = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2f %.2f] /Contents 4 0 R "
-        b"/Resources << /Font << /F1 5 0 R >> /XObject << /Im1 6 0 R >> >> >>" % (w, h),
-        b"<< /Length %d >>\nstream\n%s\nendstream" % (len(contenido), contenido),
+        b"<< /Type /Pages /Kids [%s] /Count %d >>" % (kids, n),
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
-        b"<< /Type /XObject /Subtype /Image /Width %d /Height %d /ColorSpace /DeviceRGB "
-        b"/BitsPerComponent 8 /Filter /DCTDecode /Length %d >>\nstream\n%s\nendstream" % (ancho, alto, len(jpg), jpg),
     ]
+    for i, (imagen, cabecera) in enumerate(paginas):
+        jpg = imagen.read_bytes()
+        ancho, alto = medidas_jpeg(jpg)
+        w, h_img = ancho * escala, alto * escala
+        h = h_img + margen * 2 + linea * len(cabecera)
+        textos = b"".join(b"BT /F1 11 Tf %.1f %.1f Td (%s) Tj ET\n" % (margen, h - margen - 11 - k * linea, _texto_pdf(t))
+                          for k, t in enumerate(cabecera))
+        contenido = textos + b"q %.2f 0 0 %.2f 0 0 cm /Im1 Do Q\n" % (w, h_img)
+        pag = 4 + 3 * i
+        objetos += [
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2f %.2f] /Contents %d 0 R "
+            b"/Resources << /Font << /F1 3 0 R >> /XObject << /Im1 %d 0 R >> >> >>" % (w, h, pag + 1, pag + 2),
+            b"<< /Length %d >>\nstream\n%s\nendstream" % (len(contenido), contenido),
+            b"<< /Type /XObject /Subtype /Image /Width %d /Height %d /ColorSpace /DeviceRGB "
+            b"/BitsPerComponent 8 /Filter /DCTDecode /Length %d >>\nstream\n%s\nendstream" % (ancho, alto, len(jpg), jpg),
+        ]
     salida = bytearray(b"%PDF-1.4\n")
     posiciones = []
     for n, obj in enumerate(objetos, 1):
@@ -139,11 +152,12 @@ def main(argv: list[str]) -> None:
     b = sub.add_parser("buscar")
     b.add_argument("codigo")
     f = sub.add_parser("pdf")
-    f.add_argument("imagen")
+    f.add_argument("imagenes", nargs="+")
     f.add_argument("--vuelo", required=True)
     f.add_argument("--fecha", required=True)
     f.add_argument("--ruta", required=True)
-    f.add_argument("--url", required=True)
+    f.add_argument("--url", action="append", required=True, help="una por captura, en el mismo orden")
+    f.add_argument("--titulo", action="append", default=[], help="opcional, uno por captura")
     f.add_argument("--fuente", default="FlightStats (Historical Flight Status)")
     a = sub.add_parser("anotar")
     a.add_argument("id_crm")
@@ -157,13 +171,19 @@ def main(argv: list[str]) -> None:
     if args.orden == "buscar":
         print(json.dumps(vuelo_a_buscar(args.codigo)))
     elif args.orden == "pdf":
+        n = len(args.imagenes)
+        if len(args.url) != n or (args.titulo and len(args.titulo) != n):
+            sys.exit(f"Hay {n} capturas: hace falta una --url por captura (y un --titulo por captura si se usa).")
         ahora = datetime.now(ZONA).strftime("%d/%m/%Y %H:%M")
         destino = CARPETA_PDF / nombre_pdf(args.vuelo, args.fecha, args.ruta)
-        crear_pdf(Path(args.imagen), destino, [
-            f"Vuelo {args.vuelo} - {args.fecha} - {args.ruta}",
-            f"Fuente: {args.fuente} - {args.url}",
-            f"Capturado el {ahora} (hora de España)",
-        ])
+        paginas = []
+        for i, imagen in enumerate(args.imagenes):
+            cabecera = [f"Vuelo {args.vuelo} - {args.fecha} - {args.ruta}"]
+            if args.titulo:
+                cabecera.append(args.titulo[i])
+            cabecera += [f"Fuente: {args.fuente} - {args.url[i]}", f"Capturado el {ahora} (hora de España)"]
+            paginas.append((Path(imagen), cabecera))
+        crear_pdf(paginas, destino)
         print(destino)
     elif args.orden == "anotar":
         anotar(args.id_crm, args.codigo, args.estado, args.detalle)
