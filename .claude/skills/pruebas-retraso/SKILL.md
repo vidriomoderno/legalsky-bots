@@ -100,7 +100,8 @@ Un vuelo está **pendiente** si cumple todo esto:
    if (z) Dropzone.instances.filter(o => o !== z).forEach(o => o.hiddenFileInput && o.hiddenFileInput.remove());
    z ? document.querySelectorAll('input[type=file]').length : 0
    ```
-   Si no devuelve exactamente `1`, no subas nada: anota `revisar` "no encuentro la subida del
+   Si devuelve `0`, la página aún no había cargado: recárgala, abre Repositorio y repítelo
+   una vez. Si sigue sin devolver exactamente `1`, no subas nada: anota `revisar` "no encuentro la subida del
    Repositorio". Si devuelve 1, busca con `find` "file input" y usa `file_upload` en ese
    campo con la ruta del PDF (se sube solo, no hay botón de enviar).
    Espera 3 s, recarga la página, abre Repositorio otra vez y **comprueba** que en
@@ -115,6 +116,7 @@ Un vuelo está **pendiente** si cumple todo esto:
 
 ## 3. Resumen
 
-Cierra las pestañas que abriste, ejecuta `python scripts/pruebas_retraso.py resumen` y
+Vuelve a leer los créditos de FlightStats (ahora, no los del principio), cierra las
+pestañas que abriste, ejecuta `python scripts/pruebas_retraso.py resumen` y
 cuenta al usuario en pocas líneas: cuántas pruebas se subieron, cuáles tienen menos de 3 h,
 cuáles hay que revisar a mano y por qué, y cuántos créditos de FlightStats quedan.
