@@ -14,7 +14,7 @@ if not exist "scripts\cola_pdf.py" (echo. & echo  Primero haz doble clic en inst
 echo.
 echo  ==========  LegalSky - Pedir facturas  ==========
 echo.
-call entorno.bat || goto :fin
+call "%~dp0entorno.bat" || goto :fin
 
 echo.
 echo  Leyendo el Gmail de compras y pidiendo las facturas pendientes...

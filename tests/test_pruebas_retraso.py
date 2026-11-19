@@ -1,6 +1,18 @@
-from PIL import Image
+import base64
 
 from scripts import pruebas_retraso as pr
+
+# JPEG real de 2x1 píxeles.
+JPEG_2x1 = base64.b64decode(
+    "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAx"
+    "NDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy"
+    "MjIyMjIyMjL/wAARCAABAAIDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUF"
+    "BAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVW"
+    "V1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi"
+    "4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAEC"
+    "AxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVm"
+    "Z2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq"
+    "8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDi6KKK+ZP3E//Z")
 
 
 def test_vuelo_a_buscar():
@@ -19,10 +31,12 @@ def test_nombre_pdf():
 
 
 def test_crear_pdf(tmp_path):
-    img = tmp_path / "c.png"
-    Image.new("RGB", (300, 200), "navy").save(img)
+    img = tmp_path / "c.jpg"
+    img.write_bytes(JPEG_2x1)
     pdf = pr.crear_pdf(img, tmp_path / "x" / "p.pdf", ["Vuelo FR7958", "Fuente: FlightStats"])
-    assert pdf.read_bytes().startswith(b"%PDF")
+    datos = pdf.read_bytes()
+    assert datos.startswith(b"%PDF") and b"/Width 2 /Height 1" in datos and datos.rstrip().endswith(b"%%EOF")
+    assert pr.medidas_jpeg(JPEG_2x1) == (2, 1)
 
 
 def test_anotar_hechos_y_resumen(tmp_path, monkeypatch, capsys):

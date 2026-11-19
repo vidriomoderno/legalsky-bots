@@ -46,23 +46,62 @@ def nombre_pdf(vuelo: str, fecha: str, ruta: str) -> str:
     return f"{limpio(vuelo)}_{fecha}_{limpio(ruta)}.pdf"
 
 
-def crear_pdf(imagen: Path, destino: Path, cabecera: list[str]) -> Path:
-    from PIL import Image, ImageDraw, ImageFont
+def medidas_jpeg(datos: bytes) -> tuple[int, int]:
+    """Ancho y alto de un JPEG (lee la cabecera SOF, sin librerías)."""
+    if datos[:2] != b"\xff\xd8":
+        raise ValueError("La captura no es un JPEG")
+    i = 2
+    while i < len(datos):
+        while datos[i] == 0xFF:
+            i += 1
+        marca = datos[i]
+        largo = int.from_bytes(datos[i + 1:i + 3], "big")
+        if 0xC0 <= marca <= 0xCF and marca not in (0xC4, 0xC8, 0xCC):
+            alto = int.from_bytes(datos[i + 4:i + 6], "big")
+            ancho = int.from_bytes(datos[i + 6:i + 8], "big")
+            return ancho, alto
+        i += 1 + largo
+    raise ValueError("JPEG sin medidas")
 
-    captura = Image.open(imagen).convert("RGB")
-    try:
-        letra = ImageFont.truetype("arial.ttf", 18)
-    except OSError:
-        letra = ImageFont.load_default()
-    alto_linea, margen = 28, 16
-    alto_cab = margen * 2 + alto_linea * len(cabecera)
-    hoja = Image.new("RGB", (captura.width, captura.height + alto_cab), "white")
-    dibujo = ImageDraw.Draw(hoja)
-    for i, linea in enumerate(cabecera):
-        dibujo.text((margen, margen + i * alto_linea), linea, fill="black", font=letra)
-    hoja.paste(captura, (0, alto_cab))
+
+def _texto_pdf(s: str) -> bytes:
+    s = s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    return s.encode("cp1252", "replace")
+
+
+def crear_pdf(imagen: Path, destino: Path, cabecera: list[str]) -> Path:
+    """PDF de una página: cabecera de texto y debajo la captura (JPEG), sin librerías externas."""
+    jpg = imagen.read_bytes()
+    ancho, alto = medidas_jpeg(jpg)
+    escala = 0.75  # píxeles -> puntos
+    w, h_img = ancho * escala, alto * escala
+    linea, margen = 16, 14
+    h_cab = margen * 2 + linea * len(cabecera)
+    h = h_img + h_cab
+    textos = b"".join(b"BT /F1 11 Tf %.1f %.1f Td (%s) Tj ET\n" % (margen, h - margen - 11 - k * linea, _texto_pdf(t))
+                      for k, t in enumerate(cabecera))
+    contenido = textos + b"q %.2f 0 0 %.2f 0 0 cm /Im1 Do Q\n" % (w, h_img)
+    objetos = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2f %.2f] /Contents 4 0 R "
+        b"/Resources << /Font << /F1 5 0 R >> /XObject << /Im1 6 0 R >> >> >>" % (w, h),
+        b"<< /Length %d >>\nstream\n%s\nendstream" % (len(contenido), contenido),
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+        b"<< /Type /XObject /Subtype /Image /Width %d /Height %d /ColorSpace /DeviceRGB "
+        b"/BitsPerComponent 8 /Filter /DCTDecode /Length %d >>\nstream\n%s\nendstream" % (ancho, alto, len(jpg), jpg),
+    ]
+    salida = bytearray(b"%PDF-1.4\n")
+    posiciones = []
+    for n, obj in enumerate(objetos, 1):
+        posiciones.append(len(salida))
+        salida += b"%d 0 obj\n%s\nendobj\n" % (n, obj)
+    xref = len(salida)
+    salida += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objetos) + 1)
+    salida += b"".join(b"%010d 00000 n \n" % p for p in posiciones)
+    salida += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objetos) + 1, xref)
     destino.parent.mkdir(parents=True, exist_ok=True)
-    hoja.save(destino, "PDF", resolution=110)
+    destino.write_bytes(bytes(salida))
     return destino
 
 

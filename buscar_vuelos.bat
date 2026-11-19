@@ -6,7 +6,7 @@ cd /d "%~dp0"
 rem Si se abre desde otra carpeta (por ejemplo la del ZIP), se usa el programa ya instalado.
 if not exist "scripts\buscar_vuelos.py" cd /d "%USERPROFILE%\Documents\bot legal sky" 2>nul
 if not exist "scripts\buscar_vuelos.py" (echo. & echo  Primero haz doble clic en instalar.bat. & goto :fin)
-call entorno.bat || goto :fin
+call "%~dp0entorno.bat" || goto :fin
 
 echo.
 echo  ==========  LegalSky - Buscar vuelos baratos  ==========

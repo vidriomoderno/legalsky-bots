@@ -15,13 +15,14 @@ if not exist "scripts\pruebas_retraso.py" (echo. & echo  Primero haz doble clic 
 echo.
 echo  ==========  LegalSky - Pruebas de retraso  ==========
 echo.
-call entorno.bat || goto :fin
+call "%~dp0entorno.bat" || goto :fin
 
 echo.
 echo  Buscando en FlightStats los vuelos del CRM sin prueba y subiendo los PDF...
 echo  (Claude trabaja en pestanas nuevas de Chrome; no las cierres mientras tanto)
 echo.
-call "%CLAUDE%" -p "Usa la skill pruebas-retraso y siguela completa. Al final escribe el resumen en espanol." --chrome ^
+rem Argumentos opcionales: dias hacia atras (p. ej. 7), max=N (como mucho N vuelos), prueba.
+call "%CLAUDE%" -p "Usa la skill pruebas-retraso con estos argumentos: %* . Siguela completa. Al final escribe el resumen en espanol." --chrome ^
   --allowedTools "Skill(pruebas-retraso)" "Read" "Bash(python scripts/pruebas_retraso.py *)" "Bash(python scripts\pruebas_retraso.py *)" ^
   "PowerShell(python scripts/pruebas_retraso.py *)" "PowerShell(python scripts\pruebas_retraso.py *)" "mcp__claude-in-chrome"
 echo.

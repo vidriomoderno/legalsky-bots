@@ -18,7 +18,8 @@ if not exist "%~dp0token.json" goto :faltan_secretos
 rem Actualiza el programa (no toca los .bat ni los secretos). Si no hay internet, sigue igual.
 if exist "%~dp0.instalado_por_bat" if not defined LEGALSKY_SIN_ACTUALIZAR call :actualizar
 
-call "%CLAUDE%" auth status >nul 2>nul
+rem "auth status" puede decir que si aunque la sesion haya caducado: se prueba de verdad.
+call "%CLAUDE%" -p "Responde solo: ok" --max-turns 1 >nul 2>nul
 if not errorlevel 1 exit /b 0
 echo.
 echo  Ahora se abre el navegador para entrar con tu cuenta de Claude (Pro o Max).
@@ -26,7 +27,7 @@ echo  1. Entra con la cuenta y pulsa Autorizar.
 echo  2. Si la pagina te muestra un CODIGO, pulsa "Copiar", vuelve a esta ventana,
 echo     haz clic derecho para pegarlo y pulsa Enter.
 call "%CLAUDE%" auth login
-call "%CLAUDE%" auth status >nul 2>nul
+call "%CLAUDE%" -p "Responde solo: ok" --max-turns 1 >nul 2>nul
 if errorlevel 1 (echo  No se pudo iniciar sesion en Claude. Llama a Juan Fernando. & exit /b 1)
 exit /b 0
 
