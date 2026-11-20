@@ -131,10 +131,26 @@ Un vuelo está **pendiente** si cumple todo esto:
      pestaña. Devuelve `traducidos` y `quedan_en_ingles`; lo que quede en inglés en la parte
      de arriba (salvo nombres de avión, aerolínea o "CET") tradúcelo tú con un pequeño
      JavaScript que cambie solo ese texto. No recargues la página después (volvería al inglés).
+     El script también quita vídeos y anuncios y devuelve un `diagnostico`: guárdalo.
+   - `python scripts/ventana_chrome.py delante FlightStats` (pone delante la ventana de
+     Chrome: si la consola la tapa o está minimizada, Windows puede no pintarla y la captura
+     se cuelga).
    - screenshot con `save_to_disk: true` y **sin `scale`** (tamaño completo). Mira que se
      vean el número de vuelo, salida y llegada con las horas programadas y reales, y que
      todo esté en castellano ("Salida", "Llegada", "Programada", "Real"...). Si ves inglés,
      vuelve a pasar el script y repite la captura.
+   - **Si la captura falla o se cuelga**, no insistas igual más de una vez. Prueba en este orden
+     y para en cuanto una funcione:
+     1. `python scripts/ventana_chrome.py delante`, espera 3 s (`computer` wait) y repite.
+     2. Recarga la página (volver a abrir el vuelo no gasta crédito), espera 5 s, repite zoom
+        + script de traducción + ventana delante, y vuelve a capturar.
+     3. En vez de screenshot, usa `computer` con `action: "zoom"`, `region: [0, 0, ancho,
+        alto]` de la ventana, `save_to_disk: true` y **sin `scale`**: es otra forma de captura
+        (guarda un PNG; el comando `pdf` lo acepta igual que el JPEG).
+     4. Abre el vuelo en una pestaña nueva (`tabs_create_mcp`) y repite 2 y 3 allí.
+     Si nada funciona, anota `revisar` con "captura colgada" + el `diagnostico` (en una línea)
+     y el mensaje de error exacto de la herramienta, y sigue con el siguiente vuelo (si fallan
+     dos vuelos seguidos así, para). Así se puede saber la causa.
    - Sin escala:
      `python scripts/pruebas_retraso.py pdf "<captura>" --vuelo CODIGO_CRM --fecha AAAA-MM-DD
      --ruta ORIGEN-DESTINO --url "<URL de FlightStats>"`

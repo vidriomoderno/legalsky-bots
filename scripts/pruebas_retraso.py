@@ -21,7 +21,9 @@
 import argparse
 import json
 import re
+import struct
 import sys
+import zlib
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -71,6 +73,60 @@ def medidas_jpeg(datos: bytes) -> tuple[int, int]:
             return ancho, alto
         i += 1 + largo
     raise ValueError("JPEG sin medidas")
+
+
+def _png_a_rgb(datos: bytes) -> tuple[int, int, bytes]:
+    """PNG de 8 bits (RGB o RGBA, sin entrelazar) -> ancho, alto y píxeles RGB sin filtros.
+    La captura alternativa ("zoom" de Claude in Chrome) se guarda en PNG."""
+    ancho, alto, bits, tipo, _, _, entrelazado = struct.unpack(">IIBBBBB", datos[16:29])
+    if bits != 8 or tipo not in (2, 6) or entrelazado:
+        raise ValueError("PNG no admitido (debe ser RGB o RGBA de 8 bits)")
+    idat, i = bytearray(), 8
+    while i < len(datos):
+        largo = int.from_bytes(datos[i:i + 4], "big")
+        if datos[i + 4:i + 8] == b"IDAT":
+            idat += datos[i + 8:i + 8 + largo]
+        i += 12 + largo
+    crudo = zlib.decompress(bytes(idat))
+    bpp = 3 if tipo == 2 else 4
+    fila = ancho * bpp
+    previa = bytearray(fila)
+    salida = bytearray()
+    pos = 0
+    for _ in range(alto):
+        filtro, linea = crudo[pos], bytearray(crudo[pos + 1:pos + 1 + fila])
+        pos += 1 + fila
+        if filtro == 1:
+            for x in range(bpp, fila):
+                linea[x] = (linea[x] + linea[x - bpp]) & 255
+        elif filtro == 2:
+            linea = bytearray((a + b) & 255 for a, b in zip(linea, previa))
+        elif filtro == 3:
+            for x in range(fila):
+                izq = linea[x - bpp] if x >= bpp else 0
+                linea[x] = (linea[x] + ((izq + previa[x]) >> 1)) & 255
+        elif filtro == 4:
+            for x in range(fila):
+                a = linea[x - bpp] if x >= bpp else 0
+                b = previa[x]
+                c = previa[x - bpp] if x >= bpp else 0
+                pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                linea[x] = (linea[x] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        previa = bytearray(linea)
+        if bpp == 4:
+            del linea[3::4]
+        salida += linea
+    return ancho, alto, bytes(salida)
+
+
+def _imagen_pdf(ruta: str) -> tuple[int, int, bytes, bytes]:
+    """Ancho, alto, filtro PDF y datos de una captura JPEG o PNG."""
+    datos = Path(ruta).read_bytes()
+    if datos[:8] == b"\x89PNG\r\n\x1a\n":
+        ancho, alto, rgb = _png_a_rgb(datos)
+        return ancho, alto, b"/FlateDecode", zlib.compress(rgb, 6)
+    ancho, alto = medidas_jpeg(datos)
+    return ancho, alto, b"/DCTDecode", datos
 
 
 def _texto_pdf(s: str) -> bytes:
@@ -130,8 +186,7 @@ def crear_pdf(bloques: list[dict], destino: Path, documento: str = "3", pie: str
         texto(y, f"DOCUMENTO {documento}", 13, negrita=True)
         y -= 14
     for b in bloques:
-        jpg = Path(b["imagen"]).read_bytes()
-        ancho, alto = medidas_jpeg(jpg)
+        ancho, alto, filtro, jpg = _imagen_pdf(b["imagen"])
         h_img = util * alto / ancho
         url = b.get("url") or ""
         tam_url = min(10.0, 10.0 * util / max(ancho_helvetica(url, 10.0), 1))
@@ -151,8 +206,8 @@ def crear_pdf(bloques: list[dict], destino: Path, documento: str = "3", pie: str
         y -= 8 + h_img
         nombre = b"Im%d" % len(imagenes)
         imagenes.append(b"<< /Type /XObject /Subtype /Image /Width %d /Height %d /ColorSpace /DeviceRGB "
-                        b"/BitsPerComponent 8 /Filter /DCTDecode /Length %d >>\nstream\n%s\nendstream"
-                        % (ancho, alto, len(jpg), jpg))
+                        b"/BitsPerComponent 8 /Filter %s /Length %d >>\nstream\n%s\nendstream"
+                        % (ancho, alto, filtro, len(jpg), jpg))
         paginas[-1]["imgs"].append((nombre, len(imagenes) - 1))
         paginas[-1]["ops"].append(b"q 0.5 g %.2f %.2f %.2f %.2f re f Q\n" % (MARGEN - 0.5, y - 0.5, util + 1, h_img + 1))
         paginas[-1]["ops"].append(b"q %.2f 0 0 %.2f %.2f %.2f cm /%s Do Q\n" % (util, h_img, MARGEN, y, nombre))

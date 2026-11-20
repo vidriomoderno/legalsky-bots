@@ -3,6 +3,18 @@
 // abierta (no toca nada en FlightStats). Devuelve cuántos textos tradujo y los que quedan
 // en inglés en la parte de arriba, para revisarlos.
 (() => {
+  // Antes de nada, quita vídeos, anuncios e iframes (no salen en la ficha y pueden colgar la
+  // captura) y para animaciones.
+  const quitados = document.querySelectorAll('iframe, video, embed, object, [id^="google_ads"], [class*="ad-container"]').length;
+  document.querySelectorAll('iframe, video, embed, object, [id^="google_ads"], [class*="ad-container"]').forEach(e => e.remove());
+  const st = document.createElement('style');
+  st.textContent = '*{animation:none!important;transition:none!important}';
+  document.head.appendChild(st);
+  const diagnostico = {
+    traducida_por_chrome: document.documentElement.classList.contains('translated-ltr'),
+    estado: document.readyState, quitados, alto_pagina: document.body.scrollHeight,
+    ventana: `${innerWidth}x${innerHeight}`, visible: document.visibilityState,
+  };
   const MES = {Jan:'ene',Feb:'feb',Mar:'mar',Apr:'abr',May:'may',Jun:'jun',Jul:'jul',Aug:'ago',Sep:'sept',Oct:'oct',Nov:'nov',Dec:'dic'};
   const FIJO = {
     'Departure':'Salida','Arrival':'Llegada','Scheduled':'Programada','Actual':'Real',
@@ -56,5 +68,5 @@
   }
   document.documentElement.lang = 'es';
   document.title = document.title.replace('Historical Flight Status', 'Estado histórico del vuelo');
-  return {traducidos: n, quedan_en_ingles: [...quedan].slice(0, 40)};
+  return {traducidos: n, quedan_en_ingles: [...quedan].slice(0, 40), diagnostico};
 })()

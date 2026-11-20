@@ -84,3 +84,18 @@ def test_rehacer(tmp_path, monkeypatch):
     assert pr.es_pdf_del_bot("ib1048-563_2026-11-17_scq-agp-1795.pdf", "IB1048-563")
     assert not pr.es_pdf_del_bot("ib1195_2026-11-17_mad-tls-1795092861.pdf", "IB119")
     assert not pr.es_pdf_del_bot("Pantallazo IB1195.pdf", "IB1195")
+
+
+def test_pdf_con_captura_png(tmp_path):
+    import struct, zlib
+    def trozo(tipo, datos):
+        return struct.pack(">I", len(datos)) + tipo + datos + struct.pack(">I", zlib.crc32(tipo + datos))
+    # 2x2 RGBA: fila 0 sin filtro, fila 1 con filtro "Sub"
+    filas = bytes([0, 10, 20, 30, 255, 40, 50, 60, 255]) + bytes([1, 5, 5, 5, 255, 1, 1, 1, 0])
+    png = (b"\x89PNG\r\n\x1a\n" + trozo(b"IHDR", struct.pack(">IIBBBBB", 2, 2, 8, 6, 0, 0, 0))
+           + trozo(b"IDAT", zlib.compress(filas)) + trozo(b"IEND", b""))
+    f = tmp_path / "c.png"
+    f.write_bytes(png)
+    assert pr._png_a_rgb(png) == (2, 2, bytes([10, 20, 30, 40, 50, 60, 5, 5, 5, 6, 6, 6]))
+    destino = pr.crear_pdf([{"imagen": f, "titulo": "X", "url": "https://x"}], tmp_path / "o.pdf")
+    assert b"/FlateDecode" in destino.read_bytes()
