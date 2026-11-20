@@ -9,7 +9,7 @@
            "DOCUMENTO 3", y por captura su título, la URL de donde sale y la captura. Sin --titulo:
            "FR7958 - VUELO RETRASADO" (con escala, los siguientes "CONEXIÓN PERDIDA").
     python scripts/pruebas_retraso.py anotar ID_CRM CODIGO ESTADO "DETALLE"
-        ESTADO: subida | rehecha | menos_3h | no_encontrado | revisar
+        ESTADO: subida | rehecha | menos_3h | espera | no_encontrado | revisar
     python scripts/pruebas_retraso.py hechos
         -> ids del CRM que ya tienen prueba subida por el bot (para no gastar créditos otra vez).
     python scripts/pruebas_retraso.py rehacer
@@ -33,7 +33,7 @@ TRABAJO = RAIZ / "trabajo"
 CARPETA_PDF = TRABAJO / "pruebas"
 REGISTRO = TRABAJO / "pruebas_retraso.json"
 ZONA = ZoneInfo("Europe/Madrid")
-ESTADOS = ("subida", "rehecha", "menos_3h", "no_encontrado", "revisar")
+ESTADOS = ("subida", "rehecha", "menos_3h", "espera", "no_encontrado", "revisar")
 REHACER = RAIZ / "scripts" / "rehacer.json"
 
 

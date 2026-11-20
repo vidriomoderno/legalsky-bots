@@ -97,7 +97,37 @@ Un vuelo está **pendiente** si cumple todo esto:
 - su id no está en `hechos`;
 - el código no es `CONEXIONES`.
 
+**Excepción Vueling (código VY) de HOY:** la web de Vueling solo deja consultar vuelos de hoy
+en adelante, y Fede quiere esa captura porque ahí Vueling pone el estado (y el motivo) del
+retraso. Por eso un vuelo VY con fecha de **hoy** también es pendiente aunque no hayan pasado
+3 h (si cumple el resto): haz primero el punto 2.0 y después el resto del punto 2.
+
 ## 2. Por cada vuelo pendiente
+
+0. **Solo vuelos VY con fecha de hoy** (o con escala cuyo tramo retrasado sea VY de hoy) —
+   captura de la web de Vueling:
+   1. Abre `https://www.vueling.com/es/estado-de-vuelos`. Si sale el aviso de cookies, pulsa
+      "Prefiero rechazarlas".
+   2. Pestaña **"Número de vuelo"**, escribe el código (p. ej. `VY6034`), pulsa el campo
+      **Fecha** y elige el día de hoy en el calendario (va marcado en amarillo) y **Buscar**.
+      Si salen varios, quédate con el que va del origen al destino del CRM.
+   3. Mira la etiqueta de estado. Si es **"Aterrizado"**, **"Cancelado"** o **"Desviado"**,
+      sigue. Si aún no ha terminado (programado, en vuelo, retrasado sin aterrizar…), **no
+      hagas nada más con este vuelo** (tampoco FlightStats): anota `espera` "Vueling: aún no ha
+      aterrizado" y sigue con otro (se reintentará en la próxima ejecución de hoy).
+   4. Pulsa **"Ver detalles"**, espera 2 s, JavaScript `document.body.style.zoom='0.8'` y
+      screenshot con `save_to_disk: true` sin `scale` (deben verse en el panel de la derecha
+      el vuelo, salida y llegada con hora programada y prevista y "Actualizado el…"). Lee el
+      panel con get_page_text: si hay un **motivo** del retraso o cancelación y no se ve en la
+      captura, baja dentro del panel y haz una segunda captura.
+   5. Esa captura (o esas dos) va **primero** en el PDF, con `--url
+      "https://www.vueling.com/es/estado-de-vuelos"` y `--titulo "VY6034 - ESTADO DEL VUELO
+      EN VUELING (DD/MM/AAAA)"`. Después haz los puntos 1-5 de FlightStats como siempre y
+      añade su captura detrás (`--titulo "VY6034 - VUELO RETRASADO"`, su URL), con `--fuente
+      "Vueling - Estado de vuelos y FlightStats"`. Si FlightStats aún no tiene el vuelo de hoy,
+      sube el PDF solo con Vueling (`--fuente "Vueling - Estado de vuelos"`).
+   6. Al anotar, pon en el detalle el retraso y el motivo de Vueling, p. ej. "Vueling:
+      llegada 09:20 → 12:05; motivo: restricciones de tráfico aéreo".
 
 1. `python scripts/pruebas_retraso.py buscar CODIGO` → lista de `tramos` (aerolínea y
    número) en orden. Si da `null` (por ejemplo "IB258/256"), anota `revisar` "código que no
@@ -164,10 +194,9 @@ Un vuelo está **pendiente** si cumple todo esto:
    el tramo retrasado **no** es el primero, pon un `--titulo` por captura, p. ej.
    `--titulo "UX198 - EN HORA" --titulo "UX7703 - VUELO RETRASADO"`.
    Imprime la ruta del PDF (en `trabajo/pruebas/`). La fecha es la real del primer tramo.
-6. **Si FlightStats no lo tiene** y la aerolínea es Vueling (VY), usa
-   `https://www.vueling.com/es/estado-de-vuelos` → "Número de vuelo" + fecha → "Ver detalles"
-   (solo muestra los últimos días). Captura el panel de detalles igual que arriba y crea el
-   PDF con `--fuente "Vueling - Estado de vuelos"`. Si tampoco, anota `no_encontrado`.
+6. **Si FlightStats no lo tiene**: si es VY de hoy ya tienes la captura de Vueling (punto 0)
+   y subes el PDF solo con ella. Si no, anota `no_encontrado` (la web de Vueling no deja
+   consultar días pasados).
 7. **Subir** (si no es `prueba`): en el CRM abre
    `https://crmlegalsky.com/backoffice/menus/vuelos-5497?type=_write&id=ID`, pestaña
    **Repositorio**. Ojo: la ficha tiene **dos** zonas de subida con el mismo id (Repositorio y
@@ -218,3 +247,6 @@ Vuelve a leer los créditos de FlightStats (ahora, no los del principio), cierra
 pestañas que abriste, ejecuta `python scripts/pruebas_retraso.py resumen` y
 cuenta al usuario en pocas líneas: cuántas pruebas se subieron, cuáles tienen menos de 3 h,
 cuáles hay que revisar a mano y por qué, y cuántos créditos de FlightStats quedan.
+Si hay vuelos Vueling en `espera`, dilo claro al final: "Hay N vuelos de Vueling de hoy que
+aún no han aterrizado: vuelve a ejecutar el bot más tarde, antes de medianoche (mañana la web
+de Vueling ya no los muestra)".
